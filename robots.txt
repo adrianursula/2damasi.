@@ -1,0 +1,3 @@
+User-agent: *
+Disallow:
+Sitemap: https://adrianursula.github.io/2damasi./sitemap.xml
