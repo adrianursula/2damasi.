@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración Inicial: Raspberry Pi y Mac Mini</title>
+    <style>
+        :root {
+            --primary-color: #007AFF; /* Azul estilo Apple */
+            --raspi-color: #C51A4A; /* Rojo Raspberry Pi */
+            --bg-color: #f5f5f7;
+            --sidebar-bg: #ffffff;
+            --text-color: #1d1d1f;
+            --text-secondary: #86868b;
+            --border-color: #d2d2d7;
+            --shadow: 0 4px 6px rgba(0,0,0,0.05);
+            --code-bg: #282c34;
+            --folder-color: #ffd54f;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            line-height: 1.6;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo {
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            color: var(--text-color);
+        }
+
+        .nav-links {
+            list-style: none;
+        }
+
+        .nav-links li {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            display: block;
+            padding: 0.5rem 0.8rem;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-links a:hover, .nav-links a.active {
+            color: var(--primary-color);
+            background: rgba(0, 122, 255, 0.1);
+        }
+
+        .nav-section-title {
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin: 1.5rem 0 0.5rem 0.5rem;
+            font-weight: 600;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 3rem 4rem;
+            max-width: 1200px;
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .authors {
+            color: var(--text-secondary);
+            font-style: italic;
+            margin-bottom: 1.5rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+            scroll-margin-top: 2rem;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .raspi-title { color: var(--raspi-color); }
+        .mac-title { color: var(--primary-color); }
+
+        p {
+            margin-bottom: 1rem;
+            color: #424245;
+        }
+
+        /* Step Cards */
+        .step-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        .step-number {
+            display: inline-block;
+            background: var(--text-color);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-right: 10px;
+        }
+
+        .step-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+            display: inline-block;
+        }
+
+        /* Image Containers */
+        .img-container {
+            width: 100%;
+            height: auto;
+            background: #f5f5f7;
+            border-radius: 8px;
+            margin-top: 1rem;
+            overflow: hidden;
+            border: 1px solid #e1e1e1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        /* Estilo para las fotos reales */
+        .real-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        /* Grid para imágenes múltiples */
+        .img-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        /* Estilo para placeholders (faltantes) */
+        .img-placeholder {
+            width: 100%;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            font-family: monospace;
+            text-align: center;
+            background: #eee;
+            border: 2px dashed #ccc;
+        }
+
+        .code-snippet {
+            background: #eee;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            margin-top: 8px;
+            color: #d63384;
+            border: 1px solid #ddd;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+        <div class="logo">Documentación ATECA</div>
+        <ul class="nav-links">
+            <li><a href="#intro" class="active">Inicio</a></li>
+            
+            <div class="nav-section-title">Dispositivos</div>
+            <li><a href="#raspi">Raspberry Pi</a></li>
+            <li><a href="#macmini">Mac Mini</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        
+        <header id="intro">
+            <h1>Configuración inicial de la Raspi y el Mac Mini</h1>
+            <p class="authors">Hecho por: Roberto Monedero, Adrián Úrsula, Alejandro Barroso</p>
+            <p>Esta documentación detalla los pasos seguidos para la primera puesta en marcha y configuración de los equipos del aula.</p>
+        </header>
+
+        <!-- Sección Raspberry Pi -->
+        <section id="raspi">
+            <h2 class="raspi-title">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+                &nbsp;Raspberry Pi
+            </h2>
+            <p>Imágenes ubicadas en la carpeta: <code>raspberry/</code></p>
+
+            <div class="step-card">
+                <div><span class="step-title" style="color:var(--raspi-color);">Hardware Utilizado</span></div>
+                <div class="img-container">
+                    <!-- FOTO 101: Teclado -->
+                    <img src="raspberry/IMG-20251114-WA0101.jpg" alt="Teclado Raspberry Pi" class="real-image">
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div><span class="step-number">1</span> <span class="step-title">Creación de Usuario</span></div>
+                <p>Configuración inicial de la cuenta de usuario "admin" o personalizada.</p>
+                <div class="img-container">
+                    <!-- FOTO 128: Crear Usuario (con datos) -->
+                    <img src="raspberry/IMG-20251114-WA0128.jpg" alt="Pantalla Crear Usuario" class="real-image">
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div><span class="step-number">2</span> <span class="step-title">Selección de Navegador</span></div>
+                <p>Elección del navegador predeterminado (Chromium o Firefox).</p>
+                <div class="img-container">
+                    <!-- FOTO 114: Navegador -->
+                    <img src="raspberry/IMG-20251114-WA0114.jpg" alt="Selección de Navegador" class="real-image">
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div><span class="step-number">3</span> <span class="step-title">Conexión WiFi</span></div>
+                <p>Selección de la red inalámbrica e introducción de la contraseña.</p>
+                <div class="img-container">
+                    <!-- FOTO 127: Lista de Redes (NUEVA) -->
+                    <img src="raspberry/IMG-20251114-WA0127.jpg" alt="Lista de redes WiFi" class="real-image">
+                </div>
+                <div class="img-container" style="margin-top: 10px;">
+                    <!-- FOTO 126: Password WiFi (NUEVA) -->
+                    <img src="raspberry/IMG-20251114-WA0126.jpg" alt="Password WiFi" class="real-image">
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div><span class="step-number">4</span> <span class="step-title">Actualización de Software</span></div>
+                <p>El sistema busca y descarga los paquetes más recientes.</p>
+                <div class="img-grid">
+                    <!-- FOTO 89: Intro Update -->
+                    <div class="img-container">
+                         <img src="raspberry/IMG-20251114-WA0089.jpg" alt="Aviso Actualización" class="real-image">
+                    </div>
+                    <!-- FOTO 113: Checking -->
+                    <div class="img-container">
+                         <img src="raspberry/IMG-20251114-WA0113.jpg" alt="Buscando actualizaciones" class="real-image">
+                    </div>
+                    <!-- FOTO 125: Installing -->
+                    <div class="img-container">
+                         <img src="raspberry/IMG-20251114-WA0125.jpg" alt="Instalando actualizaciones" class="real-image">
+                    </div>
+                </div>
+            </div>
+            
+             <div class="step-card">
+                <div><span class="step-number">5</span> <span class="step-title">Finalización</span></div>
+                <p>Configuración completada. El sistema está listo para reiniciar.</p>
+                <div class="img-container">
+                    <!-- FOTO 118: Setup Complete -->
+                    <img src="raspberry/IMG-20251114-WA0118.jpg" alt="Configuración Completa" class="real-image">
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div><span class="step-number">6</span> <span class="step-title">Primer Inicio y Keyring</span></div>
+                <p>Al iniciar el escritorio y abrir el navegador, se solicita configurar el depósito de claves.</p>
+                <div class="img-container">
+                    <!-- FOTO 120: Escritorio -->
+                    <img src="raspberry/IMG-20251114-WA0120.jpg" alt="Escritorio Raspberry Pi" class="real-image">
+                </div>
+                <div class="img-container" style="margin-top: 10px;">
+                    <!-- FOTO 112: Keyring con navegador -->
+                    <img src="raspberry/IMG-20251114-WA0112.jpg" alt="Depósito de Claves" class="real-image">
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección Mac Mini -->
+        <section id="macmini">
+            <h2 class="mac-title">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                &nbsp;Mac Mini
+            </h2>
+            <p>Imágenes ubicadas en la carpeta: <code>macmini/</code></p>
+
+            <div class="step-card">
+                <div><span class="step-number">1</span> <span class="step-title">Idioma y Región</span></div>
+                <p>Selección del idioma del sistema y la región.</p>
+                
+                <div class="img-container">
+                    <img src="macmini/IMG-20251114-WA0129.jpg" alt="Lista de Idiomas" class="real-image">
+                </div>
+                <div class="img-container" style="margin-top: 10px;">
+                    <img src="macmini/IMG-20251114-WA0117.jpg" alt="Resumen Idioma" class="real-image">
+                </div>
+                <div class="img-container" style="margin-top: 10px;">
+                    <img src="macmini/IMG-20251114-WA0122.jpg" alt="Selección de País" class="real-image">
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div><span class="step-number">2</span> <span class="step-title">Conectividad y Privacidad</span></div>
+                <p>Conexión a la red WiFi y aceptación de privacidad.</p>
+                <div class="img-container">
+                    <img src="macmini/IMG-20251114-WA0116.jpg" alt="Selección de Red WiFi" class="real-image">
+                </div>
+                <div class="img-container" style="margin-top: 10px;">
+                    <img src="macmini/IMG-20251114-WA0099.jpg" alt="Datos y Privacidad" class="real-image">
+                </div>
+            </div>
+            
+            <div class="step-card">
+                <div><span class="step-number">3</span> <span class="step-title">Asistente de Migración</span></div>
+                <p>Seleccionamos "Ahora no" para realizar una instalación limpia.</p>
+                <div class="img-container">
+                    <img src="macmini/IMG-20251114-WA0070.jpg" alt="Asistente de Migración" class="real-image">
+                </div>
+            </div>
+            
+            <div class="step-card">
+                <div><span class="step-number">4</span> <span class="step-title">Cuenta de Apple</span></div>
+                <p>Configuración del ID de Apple. Seleccionamos "Configurar más tarde".</p>
+                <div class="img-container">
+                    <img src="macmini/IMG-20251114-WA0073.jpg" alt="Inicio Sesión Apple ID" class="real-image">
+                </div>
+                <div class="img-container" style="margin-top: 10px;">
+                    <img src="macmini/IMG-20251114-WA0072.jpg" alt="Omitir Apple ID" class="real-image">
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div><span class="step-number">5</span> <span class="step-title">Términos y Condiciones</span></div>
+                <p>Aceptación de los contratos de licencia.</p>
+                <div class="img-container">
+                    <img src="macmini/IMG-20251114-WA0094.jpg" alt="Términos y condiciones pantalla" class="real-image">
+                </div>
+                <div class="img-container" style="margin-top: 10px;">
+                    <img src="macmini/IMG-20251114-WA0106.jpg" alt="Popup Aceptar Términos" class="real-image">
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div><span class="step-number">6</span> <span class="step-title">Creación de Cuenta Local</span></div>
+                <p>Configuración de la cuenta local de administrador (aulaateca26).</p>
+                <div class="img-container">
+                    <img src="macmini/IMG-20251114-WA0104.jpg" alt="Crear Cuenta de Ordenador" class="real-image">
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div><span class="step-number">7</span> <span class="step-title">Zona Horaria y Localización</span></div>
+                <p>Configuración de la localización del dispositivo.</p>
+                <div class="img-container">
+                    <!-- FOTO 61: Activa Localización (NUEVA) -->
+                    <img src="macmini/IMG-20251114-WA0061.jpg" alt="Pantalla Activar Localización" class="real-image">
+                </div>
+                <div class="img-container" style="margin-top: 10px;">
+                    <img src="macmini/IMG-20251114-WA0084.jpg" alt="Zona Horaria y aviso localización" class="real-image">
+                </div>
+                <div class="img-container" style="margin-top: 10px;">
+                    <img src="macmini/IMG-20251114-WA0087.jpg" alt="Confirmación no usar localización" class="real-image">
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div><span class="step-number">8</span> <span class="step-title">Análisis y Tiempo de Uso</span></div>
+                <p>Configuración de envío de diagnósticos y monitorización.</p>
+                <div class="img-container">
+                    <img src="macmini/IMG-20251114-WA0108.jpg" alt="Pantalla de Análisis" class="real-image">
+                </div>
+                <div class="img-container" style="margin-top: 10px;">
+                    <img src="macmini/IMG-20251114-WA0076.jpg" alt="Pantalla Tiempo de Uso" class="real-image">
+                </div>
+            </div>
+            
+            <div class="step-card">
+                <div><span class="step-number">9</span> <span class="step-title">Personalización Final</span></div>
+                <p>Selección de tratamiento y apariencia visual.</p>
+                <div class="img-container">
+                    <img src="macmini/IMG-20251114-WA0119.jpg" alt="Selección de Tratamiento" class="real-image">
+                </div>
+                <div class="img-container" style="margin-top: 10px;">
+                    <img src="macmini/IMG-20251114-WA0086.jpg" alt="Selección de Aspecto" class="real-image">
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div><span class="step-number">10</span> <span class="step-title">Bienvenida y Escritorio</span></div>
+                <p>El sistema está listo para ser utilizado.</p>
+                <div class="img-container">
+                    <img src="macmini/IMG-20251114-WA0082.jpg" alt="Bienvenida al Mac" class="real-image">
+                </div>
+                 <div class="img-container" style="margin-top: 10px;">
+                    <img src="macmini/IMG-20251114-WA0069.jpg" alt="Escritorio Mac Mini" class="real-image">
+                </div>
+            </div>
+        </section>
+
+        <footer style="margin-top: 4rem; text-align: center; color: var(--text-secondary); font-size: 0.9rem; border-top: 1px solid var(--border-color); padding-top: 2rem;">
+            <p>&copy; Adrian ursula y asignatura de IA</p>
+        </footer>
+
+    </main>
+
+    <script>
+        const sections = document.querySelectorAll('section');
+        const navLi = document.querySelectorAll('.sidebar ul li a');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 60) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLi.forEach(a => {
+                a.classList.remove('active');
+                if (a.getAttribute('href').includes(current)) {
+                    a.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
