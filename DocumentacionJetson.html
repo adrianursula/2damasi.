@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guía de Configuración Jetson Orin Nano</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- RESET & VARIABLES --- */
+        :root {
+            --primary: #76b900; /* NVIDIA Green */
+            --primary-light: #f0fdf4;
+            --primary-dark: #5e9400;
+            --slate-50: #f8fafc;
+            --slate-100: #f1f5f9;
+            --slate-200: #e2e8f0;
+            --slate-300: #cbd5e1;
+            --slate-400: #94a3b8;
+            --slate-500: #64748b;
+            --slate-600: #475569;
+            --slate-700: #334155;
+            --slate-800: #1e293b;
+            --slate-900: #0f172a;
+            --white: #ffffff;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            --radius: 0.75rem;
+            --font-sans: 'Inter', system-ui, sans-serif;
+            --font-mono: 'Menlo', 'Monaco', 'Courier New', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--slate-50);
+            color: var(--slate-800);
+            line-height: 1.5;
+        }
+
+        a { text-decoration: none; color: inherit; }
+        ul { list-style: none; }
+        img { max-width: 100%; display: block; }
+        button { border: none; background: none; cursor: pointer; }
+
+        /* --- ICONS (Inline SVG Styles) --- */
+        .icon { width: 20px; height: 20px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+        .icon-sm { width: 16px; height: 16px; }
+        .icon-lg { width: 32px; height: 32px; }
+        .icon-green { stroke: var(--primary); }
+
+        /* --- LAYOUT --- */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: 260px;
+            background: var(--white);
+            border-right: 1px solid var(--slate-200);
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            overflow-y: auto;
+            flex-shrink: 0;
+            transition: transform 0.3s ease;
+            z-index: 40;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--slate-100);
+        }
+
+        .brand {
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .brand span { display: flex; flex-direction: column; line-height: 1.1; }
+        .brand small { font-size: 0.8rem; font-weight: 400; color: var(--slate-500); }
+
+        .nav-menu { padding: 1rem; display: flex; flex-direction: column; gap: 0.25rem; }
+        .nav-category {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--slate-400);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+            padding-left: 1rem;
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--slate-600);
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            background-color: var(--primary-light);
+            color: var(--primary-dark);
+        }
+
+        .nav-badge {
+            background: var(--slate-100);
+            color: var(--slate-500);
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        /* --- MAIN CONTENT --- */
+        .main-content {
+            flex: 1;
+            padding: 2.5rem;
+            max-width: 1024px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* --- HEADER SECTION --- */
+        .page-header { margin-bottom: 3rem; }
+        .version-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #dcfce7;
+            color: #166534;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+        .ping {
+            width: 8px; height: 8px; background: #22c55e; border-radius: 50%;
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2);
+        }
+        
+        h1 { font-size: 2.25rem; font-weight: 800; color: var(--slate-900); margin-bottom: 1rem; }
+        .subtitle { font-size: 1.125rem; color: var(--slate-600); max-width: 65ch; }
+
+        /* --- SECTIONS --- */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--slate-200);
+        }
+        .section-header h2 { font-size: 1.5rem; font-weight: 700; }
+        .section-header .icon { color: var(--slate-400); width: 24px; height: 24px; }
+
+        /* --- CARDS & GRID --- */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+
+        .card {
+            background: var(--white);
+            border: 1px solid var(--slate-200);
+            border-radius: var(--radius);
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card-padding { padding: 1.5rem; }
+        
+        /* Image containers */
+        .img-box {
+            position: relative;
+            background: var(--slate-100);
+            overflow: hidden;
+            cursor: pointer;
+        }
+        
+        .img-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+        
+        .img-box:hover img { transform: scale(1.02); }
+        
+        .img-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .img-box:hover .img-overlay { opacity: 1; }
+        .img-overlay .icon { color: white; width: 32px; height: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+
+        .aspect-video { aspect-ratio: 16/9; }
+        .h-40 { height: 10rem; }
+        .h-48 { height: 12rem; }
+        .h-64 { height: 16rem; }
+        
+        /* --- CARD CONTENTS --- */
+        .step-badge {
+            background: var(--slate-800);
+            color: var(--white);
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        
+        .card-title { font-weight: 700; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .text-sm { font-size: 0.875rem; color: var(--slate-600); }
+        .text-xs { font-size: 0.75rem; }
+        .text-muted { color: var(--slate-500); }
+
+        /* Dark Theme Cards */
+        .card-dark { background: var(--slate-900); border-color: var(--slate-700); color: var(--slate-100); }
+        .card-dark .card-title { color: var(--white); }
+        .card-dark .step-badge { background: var(--primary); color: var(--slate-900); }
+        .card-dark .text-sm { color: var(--slate-300); }
+        .terminal-block {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--slate-600);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--primary);
+        }
+
+        /* --- MOBILE HEADER --- */
+        .mobile-header {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%;
+            background: var(--white);
+            border-bottom: 1px solid var(--slate-200);
+            padding: 1rem;
+            z-index: 50;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* --- MODAL --- */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 100;
+            display: none; /* hidden by default */
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            backdrop-filter: blur(4px);
+        }
+        
+        .modal.active { display: flex; }
+        
+        .modal img {
+            max-width: 100%;
+            max-height: 90vh;
+            border-radius: 0.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+        }
+        .close-btn:hover { background: rgba(255,255,255,0.2); }
+
+        /* --- FOOTER --- */
+        footer {
+            margin-top: 5rem;
+            padding: 2rem;
+            border-top: 1px solid var(--slate-200);
+            text-align: center;
+            color: var(--slate-400);
+            font-size: 0.875rem;
+        }
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 1024px) {
+            .app-container { flex-direction: column; padding-top: 60px; }
+            .sidebar {
+                position: fixed;
+                transform: translateX(-100%);
+            }
+            .sidebar.open { transform: translateX(0); }
+            .mobile-header { display: flex; }
+            .main-content { padding: 1.5rem; }
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+            
+            /* Specific fix for the "Hardware Step 6" card to stack on mobile */
+            .flex-row-mobile { flex-direction: column !important; }
+            .w-half-mobile { width: 100% !important; height: 200px !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+        <div class="brand">
+            <!-- Icono CPU -->
+            <svg class="icon icon-green" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><path d="M9 1V3"></path><path d="M15 1V3"></path><path d="M9 21V23"></path><path d="M15 21V23"></path><path d="M20 9H22"></path><path d="M20 14H22"></path><path d="M2 9H4"></path><path d="M2 14H4"></path></svg>
+            Jetson Docs
+        </div>
+        <button onclick="toggleSidebar()">
+            <!-- Icono Menu -->
+            <svg class="icon" viewBox="0 0 24 24"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg>
+        </button>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <svg class="icon icon-lg icon-green" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><path d="M9 1V3"></path><path d="M15 1V3"></path><path d="M9 21V23"></path><path d="M15 21V23"></path><path d="M20 9H22"></path><path d="M20 14H22"></path><path d="M2 9H4"></path><path d="M2 14H4"></path></svg>
+                    <span>Jetson<br><small>Orin Nano Dev Kit</small></span>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <a href="#intro" class="nav-link">Introducción</a>
+                
+                <div class="nav-category">Fase 1: Hardware</div>
+                <a href="#step-1" class="nav-link"><span class="nav-badge">1</span> Unboxing & Componentes</a>
+                <a href="#step-3" class="nav-link"><span class="nav-badge">3</span> Montaje & SSD</a>
+
+                <div class="nav-category">Fase 2: Software Base</div>
+                <a href="#step-7" class="nav-link"><span class="nav-badge">7</span> Boot & Ubuntu</a>
+                <a href="#step-10" class="nav-link"><span class="nav-badge">10</span> Actualizaciones</a>
+
+                <div class="nav-category">Fase 3: Almacenamiento</div>
+                <a href="#step-12" class="nav-link"><span class="nav-badge">12</span> Formateo NVMe</a>
+
+                <div class="nav-category">Fase 4: IA Setup</div>
+                <a href="#step-15" class="nav-link"><span class="nav-badge">15</span> Entorno & Deps</a>
+                
+                <div class="nav-category">Fase 5: Modelos LLM</div>
+                <a href="#step-20" class="nav-link"><span class="nav-badge">20</span> Búsqueda VLM</a>
+                <a href="#step-24" class="nav-link"><span class="nav-badge">24</span> Descarga GGUF</a>
+
+                <div class="nav-category">Fase 6: Inferencia</div>
+                <a href="#step-26" class="nav-link"><span class="nav-badge">26</span> Carga RAM</a>
+                <a href="#step-28" class="nav-link"><span class="nav-badge">28</span> Prueba Lógica</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            
+            <header id="intro" class="page-header">
+                <div class="version-badge">
+                    <span class="ping"></span>
+                    Documentación v1.3 Completa
+                </div>
+                <h1>Configuración Inicial NVIDIA Jetson Orin Nano</h1>
+                <p class="subtitle">
+                    Guía "Zero to Hero": Desde el unboxing hasta la ejecución de modelos de IA con razonamiento lógico avanzado.
+                </p>
+            </header>
+
+            <!-- SECTION 1: HARDWARE -->
+            <section>
+                <div class="section-header">
+                    <!-- Icon Package -->
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M12 22v-9"></path><path d="M12 13V4"></path><path d="M12 4l7 4 3-2-10-5-10 5 3 2 7-4z"></path><path d="M2.1 11l9.9 5.5L22 11"></path><path d="M2 17l10 5 10-5"></path></svg>
+                    <h2>Fase 1: Hardware y Montaje</h2>
+                </div>
+
+                <div class="grid-2" style="margin-bottom: 2rem;">
+                    <div id="step-1" class="card card-padding">
+                        <div class="card-title"><span class="step-badge">1</span> Unboxing</div>
+                        <div class="img-box h-48" style="border-radius: 0.5rem; margin-bottom: 0.5rem;" onclick="openModal('Jetson/IMG_20251120_194812.jpg')">
+                            <img src="Jetson/IMG_20251120_194812.jpg" alt="Unboxing">
+                            <div class="img-overlay"><svg class="icon" viewBox="0 0 24 24"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg></div>
+                        </div>
+                    </div>
+                    <div id="step-2" class="card card-padding">
+                        <div class="card-title"><span class="step-badge">2</span> Componentes</div>
+                        <div class="img-box h-48" style="border-radius: 0.5rem; margin-bottom: 0.5rem;" onclick="openModal('Jetson/IMG_20251120_200210.jpg')">
+                            <img src="Jetson/IMG_20251120_200210.jpg" alt="Componentes">
+                            <div class="img-overlay"><svg class="icon" viewBox="0 0 24 24"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="step-3" class="grid-3" style="margin-bottom: 2rem;">
+                    <div class="card card-padding">
+                        <div class="card-title text-sm"><span class="step-badge">3</span> Slot M.2 NVMe</div>
+                        <div class="img-box h-40" style="border-radius: 0.5rem; margin-bottom: 0.5rem;" onclick="openModal('Jetson/IMG_20251120_195225.jpg')">
+                            <img src="Jetson/IMG_20251120_195225.jpg" alt="NVMe">
+                            <div class="img-overlay"><svg class="icon" viewBox="0 0 24 24"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg></div>
+                        </div>
+                        <p class="text-xs text-muted">Vista inferior con SSD Lexar instalado.</p>
+                    </div>
+                    <div class="card card-padding">
+                        <div class="card-title text-sm"><span class="step-badge">4</span> Disipador</div>
+                        <div class="img-box h-40" style="border-radius: 0.5rem; margin-bottom: 0.5rem;" onclick="openModal('Jetson/IMG_20251120_195202.jpg')">
+                            <img src="Jetson/IMG_20251120_195202.jpg" alt="Disipador">
+                            <div class="img-overlay"><svg class="icon" viewBox="0 0 24 24"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg></div>
+                        </div>
+                        <p class="text-xs text-muted">Vista superior del ventilador.</p>
+                    </div>
+                    <div class="card card-padding">
+                        <div class="card-title text-sm"><span class="step-badge">5</span> MicroSD</div>
+                        <div class="img-box h-40" style="border-radius: 0.5rem; margin-bottom: 0.5rem;" onclick="openModal('Jetson/IMG_20251120_195442.jpg')">
+                            <img src="Jetson/IMG_20251120_195442.jpg" alt="MicroSD">
+                            <div class="img-overlay"><svg class="icon" viewBox="0 0 24 24"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg></div>
+                        </div>
+                        <p class="text-xs text-muted">Slot oculto bajo el disipador.</p>
+                    </div>
+                </div>
+
+                <div id="step-6" class="card" style="margin-bottom: 2rem; display: flex; flex-direction: row;">
+                    <div class="img-box h-64 w-half-mobile" style="width: 50%;" onclick="openModal('Jetson/IMG_20251120_200837.jpg')">
+                        <img src="Jetson/IMG_20251120_200837.jpg" alt="Conexiones">
+                        <div class="img-overlay"><svg class="icon" viewBox="0 0 24 24"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg></div>
+                    </div>
+                    <div class="card-padding" style="width: 50%; display: flex; flex-direction: column; justify-content: center;">
+                        <div class="card-title" style="font-size: 1.25rem;"><span class="step-badge">6</span> Conexiones Finales</div>
+                        <p class="text-sm">Todo listo: Alimentación, Red, Video y Periféricos.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: SOFTWARE -->
+            <section style="margin-top: 4rem;">
+                <div class="section-header">
+                    <!-- Icon Settings -->
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    <h2>Fase 2: Boot y Ajustes</h2>
+                </div>
+
+                <div class="grid-4" style="margin-bottom: 2rem;">
+                    <div id="step-7" style="cursor: pointer;" onclick="openModal('Jetson/IMG_20251120_200957.jpg')">
+                        <div class="img-box aspect-video" style="border-radius: 0.5rem; border:1px solid var(--slate-200);">
+                            <img src="Jetson/IMG_20251120_200957.jpg" alt="Boot">
+                        </div>
+                        <p class="text-xs text-center" style="margin-top: 0.5rem; font-weight: 600;">Secuencia de Arranque</p>
+                    </div>
+                    <div id="step-8" style="cursor: pointer;" onclick="openModal('Jetson/IMG_20251120_202326.jpg')">
+                         <div class="img-box aspect-video" style="border-radius: 0.5rem; border:1px solid var(--slate-200);">
+                            <img src="Jetson/IMG_20251120_202326.jpg" alt="Licencias">
+                        </div>
+                        <p class="text-xs text-center" style="margin-top: 0.5rem; font-weight: 600;">Licencias NVIDIA</p>
+                    </div>
+                    <div id="step-9" style="cursor: pointer;" onclick="openModal('Jetson/IMG_20251120_202635.jpg')">
+                         <div class="img-box aspect-video" style="border-radius: 0.5rem; border:1px solid var(--slate-200);">
+                            <img src="Jetson/IMG_20251120_202635.jpg" alt="WiFi">
+                        </div>
+                        <p class="text-xs text-center" style="margin-top: 0.5rem; font-weight: 600;">Conexión Red</p>
+                    </div>
+                    <div id="step-10" style="cursor: pointer;" onclick="openModal('Jetson/IMG_20251120_203952.jpg')">
+                         <div class="img-box aspect-video" style="border-radius: 0.5rem; border:1px solid var(--slate-200);">
+                            <img src="Jetson/IMG_20251120_203952.jpg" alt="Cuentas">
+                        </div>
+                        <p class="text-xs text-center" style="margin-top: 0.5rem; font-weight: 600;">Cuentas Online</p>
+                    </div>
+                </div>
+
+                <div id="step-11" class="card grid-2" style="margin-bottom: 2rem;">
+                    <div class="card-padding" style="display: flex; flex-direction: column; justify-content: center;">
+                        <div class="card-title" style="font-size: 1.25rem;"><span class="step-badge">11</span> Actualización</div>
+                        <p class="text-sm" style="margin-bottom: 1rem;">Es crítico actualizar el sistema nada más iniciar. Ubuntu buscará actualizaciones de seguridad y drivers.</p>
+                        <div style="background: #fffbeb; color: #92400e; padding: 0.75rem; border-radius: 0.5rem; font-size: 0.75rem; border: 1px solid #fcd34d;">
+                            <strong>Aviso:</strong> Este proceso puede tardar varios minutos y requerir un reinicio.
+                        </div>
+                    </div>
+                    <div class="img-box h-64" style="height: auto;" onclick="openModal('Jetson/IMG_20251120_204158.jpg')">
+                        <img src="Jetson/IMG_20251120_204158.jpg" alt="Update">
+                        <div class="img-overlay"><svg class="icon" viewBox="0 0 24 24"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: STORAGE -->
+            <section style="margin-top: 4rem;">
+                <div class="section-header">
+                    <!-- Icon Hard Drive -->
+                    <svg class="icon" viewBox="0 0 24 24"><line x1="22" x2="2" y1="12" y2="12"></line><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path><line x1="6" x2="6.01" y1="16" y2="16"></line><line x1="10" x2="10.01" y1="16" y2="16"></line></svg>
+                    <h2>Fase 3: Almacenamiento NVMe</h2>
+                </div>
+
+                <div class="grid-2" style="margin-bottom: 2rem;">
+                    <div id="step-12" class="card card-dark">
+                        <div style="padding: 0.75rem; background: var(--slate-800); border-bottom: 1px solid var(--slate-700); font-family: var(--font-mono); font-size: 0.8rem; display: flex; justify-content: space-between;">
+                            <span style="color: var(--primary);">$ Formateo</span>
+                            <span>Terminal</span>
+                        </div>
+                        <div class="img-box h-64" onclick="openModal('Jetson/IMG_20251127_200536.jpg')">
+                            <img src="Jetson/IMG_20251127_200536.jpg" alt="Formateo" style="opacity: 0.9;">
+                        </div>
+                        <div class="card-padding terminal-block" style="border-top-left-radius: 0; border-top-right-radius: 0;">
+                            <p style="margin-bottom: 0.5rem;"><span style="color:var(--primary)">user@jetson:~$</span> sudo mkfs.ext4 /dev/nvme0n1</p>
+                            <p style="color: var(--slate-500);">// Creamos el sistema de archivos ext4</p>
+                        </div>
+                    </div>
+
+                    <div id="step-13" class="card card-dark">
+                        <div style="padding: 0.75rem; background: var(--slate-800); border-bottom: 1px solid var(--slate-700); font-family: var(--font-mono); font-size: 0.8rem; display: flex; justify-content: space-between;">
+                            <span style="color: var(--primary);">$ Montaje</span>
+                            <span>Terminal</span>
+                        </div>
+                        <div class="img-box h-64" onclick="openModal('Jetson/IMG_20251127_200614.jpg')">
+                            <img src="Jetson/IMG_20251127_200614.jpg" alt="Montaje" style="opacity: 0.9;">
+                        </div>
+                        <div class="card-padding terminal-block" style="border-top-left-radius: 0; border-top-right-radius: 0;">
+                            <p style="margin-bottom: 0.5rem;"><span style="color:var(--primary)">user@jetson:~$</span> sudo mkdir /ssd</p>
+                            <p style="color: var(--slate-500);">// Creamos directorio y verificamos UUID</p>
+                        </div>
+                    </div>
+                </div>
+                
+                 <div id="step-14" class="card grid-2" style="grid-template-columns: 2fr 1fr;">
+                    <div class="img-box h-64 w-half-mobile" onclick="openModal('Jetson/IMG_20251127_201538.jpg')">
+                        <img src="Jetson/IMG_20251127_201538.jpg" alt="fstab">
+                    </div>
+                    <div class="card-padding" style="display:flex; flex-direction:column; justify-content:center;">
+                        <div class="card-title"><span class="step-badge">14</span> fstab</div>
+                        <p class="text-sm">Configuración de montaje persistente en <code>/etc/fstab</code>.</p>
+                        <code style="background:var(--slate-100); padding:0.5rem; margin-top:0.5rem; font-size:0.75rem; border-radius:4px; display:block;">UUID=... /ssd ext4 defaults 0 2</code>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 4: AI SETUP -->
+            <section style="margin-top: 4rem;">
+                <div class="section-header">
+                    <!-- Icon Brain -->
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"></path><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"></path></svg>
+                    <h2>Fase 4: Entorno de IA</h2>
+                </div>
+
+                <div class="grid-2" style="margin-bottom: 2rem;">
+                    <div id="step-15" class="card">
+                         <div class="img-box h-48" onclick="openModal('Jetson/IMG_20251127_195339.jpg')">
+                            <img src="Jetson/IMG_20251127_195339.jpg" alt="NVIDIA Lab">
+                             <div class="img-overlay"><svg class="icon" viewBox="0 0 24 24"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg></div>
+                        </div>
+                        <div class="card-padding">
+                            <div class="card-title text-sm">15. Documentación</div>
+                            <p class="text-xs text-muted">Tutoriales oficiales NVIDIA AI Lab.</p>
+                        </div>
+                    </div>
+                    <div id="step-16" class="card">
+                         <div class="img-box h-48" onclick="openModal('Jetson/IMG_20251127_195900.jpg')">
+                            <img src="Jetson/IMG_20251127_195900.jpg" alt="LM Studio">
+                             <div class="img-overlay"><svg class="icon" viewBox="0 0 24 24"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg></div>
+                        </div>
+                        <div class="card-padding">
+                            <div class="card-title text-sm">16. LM Studio</div>
+                            <p class="text-xs text-muted">Descarga de la versión Linux AppImage.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="step-17" class="card card-dark grid-2" style="margin-bottom: 2rem;">
+                    <div class="card-padding" style="display:flex; flex-direction:column; justify-content:center;">
+                        <div class="card-title"><span class="step-badge" style="background:var(--primary); color:black;">17</span> Dependencias</div>
+                        <p class="text-sm">Instalación necesaria de libfuse2 para AppImages.</p>
+                        <code style="background:rgba(0,0,0,0.5); padding:0.5rem; margin-top:0.5rem; font-size:0.75rem; border-radius:4px; color:var(--primary);">$ sudo apt install libfuse2</code>
+                    </div>
+                    <div class="img-box h-48" style="height:auto;" onclick="openModal('Jetson/IMG_20251127_202152.jpg')">
+                        <img src="Jetson/IMG_20251127_202152.jpg" alt="Terminal Fuse">
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div id="step-18" class="card">
+                        <div class="img-box h-48" onclick="openModal('Jetson/IMG_20251127_202859.jpg')">
+                            <img src="Jetson/IMG_20251127_202859.jpg" alt="Setup">
+                             <div class="img-overlay"><svg class="icon" viewBox="0 0 24 24"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg></div>
+                        </div>
+                        <div class="card-padding" style="border-top:1px solid var(--slate-100)">
+                            <div class="text-xs" style="font-weight:700; color:var(--primary); text-transform:uppercase;">Setup Final</div>
+                            <div class="card-title">Perfil Power User</div>
+                        </div>
+                    </div>
+                    <div id="step-19" class="card">
+                         <div class="img-box h-48" onclick="openModal('Jetson/IMG_20251127_202908.jpg')">
+                            <img src="Jetson/IMG_20251127_202908.jpg" alt="Ready">
+                             <div class="img-overlay"><svg class="icon" viewBox="0 0 24 24"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg></div>
+                        </div>
+                        <div class="card-padding" style="border-top:1px solid var(--slate-100)">
+                            <div class="text-xs" style="font-weight:700; color:var(--primary); text-transform:uppercase;">Listo</div>
+                            <div class="card-title">LM Studio Running</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+             <!-- SECTION 5: MODEL DOWNLOAD -->
+            <section style="margin-top: 4rem;">
+                <div class="section-header">
+                    <!-- Icon Cloud Download -->
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="M12 12v9"></path><path d="m8 17 4 4 4-4"></path></svg>
+                    <h2>Fase 5: Modelos (Qwen3-VL)</h2>
+                </div>
+
+                <div id="step-20" class="card" style="margin-bottom: 2rem;">
+                    <div style="padding: 1rem; background: var(--slate-50); border-bottom: 1px solid var(--slate-100);">
+                        <div class="card-title"><span class="step-badge">20</span> Búsqueda en Hugging Face</div>
+                    </div>
+                    <div class="grid-3" style="gap: 1px; background: var(--slate-200);">
+                        <div class="img-box h-48" onclick="openModal('Jetson/IMG_20251127_202921.jpg')"><img src="Jetson/IMG_20251127_202921.jpg"></div>
+                        <div class="img-box h-48" onclick="openModal('Jetson/IMG_20251127_203014.jpg')"><img src="Jetson/IMG_20251127_203014.jpg"></div>
+                        <div class="img-box h-48" onclick="openModal('Jetson/IMG_20251127_203325.jpg')"><img src="Jetson/IMG_20251127_203325.jpg"></div>
+                    </div>
+                </div>
+
+                <div id="step-22" class="card grid-2" style="margin-bottom: 2rem;">
+                    <div class="img-box h-64 w-half-mobile" onclick="openModal('Jetson/IMG_20251127_203524.jpg')">
+                        <img src="Jetson/IMG_20251127_203524.jpg" alt="Model Card">
+                         <div class="img-overlay"><svg class="icon" viewBox="0 0 24 24"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg></div>
+                    </div>
+                    <div class="card-padding" style="display:flex; flex-direction:column; justify-content:center;">
+                        <div class="card-title"><span class="step-badge">22</span> Selección de Modelo</div>
+                        <p class="text-sm" style="margin-bottom: 1rem;"><strong>Qwen3-VL-4B</strong>: Modelo multimodal optimizado.</p>
+                        <ul class="text-xs text-muted" style="display:flex; flex-direction:column; gap:0.5rem;">
+                            <li style="display:flex; gap:0.5rem;"><svg class="icon icon-sm icon-green" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg> Vision Capabilities</li>
+                            <li style="display:flex; gap:0.5rem;"><svg class="icon icon-sm icon-green" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg> OCR & Visual Coding</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div id="step-24" class="grid-3" style="margin-bottom: 2rem;">
+                    <div class="card card-padding" style="grid-column: span 2;">
+                        <div class="card-title"><span class="step-badge">24</span> Compatibilidad RAM</div>
+                        <div style="display:flex; gap:1rem; margin-top:1rem;">
+                            <div style="cursor:pointer;" onclick="openModal('Jetson/IMG_20251127_203617.jpg')">
+                                <img src="Jetson/IMG_20251127_203617.jpg" style="border-radius:4px; border:1px solid var(--slate-100); width: 120px;">
+                                <p class="text-xs">4B Params</p>
+                            </div>
+                            <div style="cursor:pointer;" onclick="openModal('Jetson/IMG_20251127_203542.jpg')">
+                                <img src="Jetson/IMG_20251127_203542.jpg" style="border-radius:4px; border:1px solid var(--slate-100); width: 120px;">
+                                <p class="text-xs" style="color:var(--primary-dark);">Likely Fit</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card card-dark card-padding" style="display:flex; flex-direction:column; justify-content:center;">
+                        <h4 style="font-size:0.875rem; color:var(--primary); margin-bottom:0.5rem;">RAM Usage</h4>
+                        <div style="background:var(--slate-700); height:8px; border-radius:99px; overflow:hidden;">
+                            <div style="background:var(--primary); width:45%; height:100%;"></div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--slate-400); margin-top:0.25rem;">
+                            <span>3.3GB Model</span>
+                            <span>8GB Total</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+             <!-- SECTION 6: INFERENCE -->
+            <section style="margin-top: 4rem;">
+                <div class="section-header">
+                    <!-- Icon Message -->
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    <h2>Fase 6: Inferencia y Pruebas</h2>
+                </div>
+
+                <div id="step-26" class="card card-dark grid-3" style="gap:0; margin-bottom:2rem;">
+                     <div class="img-box h-64" style="background:black;" onclick="openModal('Jetson/IMG_20251127_204536.jpg')">
+                         <img src="Jetson/IMG_20251127_204536.jpg" style="opacity:0.8;">
+                     </div>
+                     <div class="img-box h-64" style="background:black;" onclick="openModal('Jetson/IMG_20251127_204736.jpg')">
+                         <img src="Jetson/IMG_20251127_204736.jpg" style="opacity:0.8;">
+                     </div>
+                     <div class="card-padding" style="display:flex; flex-direction:column; justify-content:center;">
+                         <div class="card-title" style="color:white;"><span class="step-badge" style="background:var(--primary); color:black;">26</span> Carga RAM</div>
+                         <div class="terminal-block">
+                             Memory Consumption:<br>
+                             <span style="color:white; font-weight:bold;">3.13 GB / 7 GB</span>
+                         </div>
+                     </div>
+                </div>
+
+                <div id="step-28" class="card grid-2" style="margin-bottom:2rem;">
+                     <div class="card-padding" style="display:flex; flex-direction:column; justify-content:center;">
+                        <div class="card-title" style="font-size:1.25rem;"><span class="step-badge">28</span> Hola Mundo</div>
+                        <div style="background:var(--slate-100); padding:1rem; border-radius:0.5rem; margin-top:1rem;">
+                            <p style="font-weight:700; color:var(--slate-700);">User:</p>
+                            <p style="margin-bottom:0.5rem;">HOLA</p>
+                            <p style="font-weight:700; color:var(--primary-dark);">AI:</p>
+                            <p>¡Hola! 😊 ¿En qué puedo ayudarte hoy?</p>
+                        </div>
+                     </div>
+                     <div class="img-box h-64" onclick="openModal('Jetson/IMG_20251127_204907.jpg')">
+                        <img src="Jetson/IMG_20251127_204907.jpg" alt="Hola Mundo">
+                         <div class="img-overlay"><svg class="icon" viewBox="0 0 24 24"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg></div>
+                     </div>
+                </div>
+
+                <div id="step-29" class="card" style="margin-bottom:2rem;">
+                     <div style="padding:1rem; border-bottom:1px solid var(--slate-100); background:var(--slate-50);">
+                         <div class="card-title"><span class="step-badge">29</span> Lógica Avanzada: El Acertijo de la Mesa</div>
+                     </div>
+                     <div class="grid-2" style="gap:0;">
+                         <div class="img-box h-64" style="border-right:1px solid white;" onclick="openModal('Jetson/IMG_20251127_205910.jpg')">
+                             <img src="Jetson/IMG_20251127_205910.jpg">
+                             <div style="position:absolute; top:10px; left:10px; background:rgba(0,0,0,0.7); color:white; padding:2px 6px; font-size:0.7rem; border-radius:4px;">PROMPT</div>
+                         </div>
+                         <div class="img-box h-64" onclick="openModal('Jetson/IMG_20251127_210132.jpg')">
+                             <img src="Jetson/IMG_20251127_210132.jpg">
+                              <div style="position:absolute; top:10px; left:10px; background:rgba(118, 185, 0, 0.9); color:white; padding:2px 6px; font-size:0.7rem; border-radius:4px;">RESPUESTA</div>
+                         </div>
+                     </div>
+                     <div class="card-padding">
+                         <p class="text-sm">El modelo razona correctamente que si la mesa está en una superficie plana, la probabilidad de que las 4 patas toquen el suelo a la vez es baja si una es diferente, demostrando comprensión física del mundo.</p>
+                     </div>
+                </div>
+            </section>
+
+            <footer>
+                <p>Documentación generada automáticamente &copy; 2025.</p>
+            </footer>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="modal" onclick="closeModal()">
+        <button class="close-btn" onclick="closeModal()">
+            <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+        <img id="modal-img" src="" onclick="event.stopPropagation()">
+    </div>
+
+    <script>
+        // Sidebar Toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('open');
+        }
+
+        // Modal Logic
+        function openModal(src) {
+            const modal = document.getElementById('modal');
+            const img = document.getElementById('modal-img');
+            img.src = src;
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('modal');
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+    </script>
+</body>
+</html>
