@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fine-Tuning de LLMs — Guía Maestra</title>
+    <meta name="description"
+        content="Guía completa de Fine-Tuning de modelos de lenguaje con LoRA. Especialización del modelo Llama-3.2-3B como IA experta en mantenimiento del Motor MK-9.">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a2e;
+            --bg-code: #0d1117;
+            --accent-primary: #ec4899;
+            --accent-secondary: #f472b6;
+            --accent-glow: rgba(236, 72, 153, 0.10);
+            --text-primary: #e4e4e7;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --border: rgba(255, 255, 255, 0.06);
+            --border-accent: rgba(236, 72, 153, 0.3);
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        .hero {
+            position: relative;
+            min-height: 55vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 4rem 2rem;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 50% 50%, var(--accent-glow) 0%, transparent 50%);
+            animation: glow 8s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1) rotate(3deg);
+            }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 850px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1.25rem;
+            background: rgba(236, 72, 153, 0.1);
+            border: 1px solid var(--border-accent);
+            border-radius: 100px;
+            font-size: 0.85rem;
+            color: var(--accent-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 3.75rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #fff 0%, var(--accent-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 650px;
+            margin: 0 auto 1.5rem;
+        }
+
+        .hero-author {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 10, 15, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+        }
+
+        .nav-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            gap: 0.25rem;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding: 0.75rem 0;
+        }
+
+        .nav-inner::-webkit-scrollbar {
+            display: none;
+        }
+
+        .nav-link {
+            padding: 0.5rem 1rem;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: 8px;
+            white-space: nowrap;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-link.active {
+            color: var(--accent-secondary);
+            background: var(--accent-glow);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 3rem 2rem 6rem;
+        }
+
+        .section {
+            margin-bottom: 4rem;
+            scroll-margin-top: 5rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-number {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: #fff;
+            font-weight: 700;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .section-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .section-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .highlight {
+            color: var(--accent-secondary);
+            font-weight: 600;
+        }
+
+        h3 {
+            color: var(--text-primary);
+            margin: 1.5rem 0 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        code {
+            background: rgba(255, 255, 255, 0.06);
+            padding: 0.15rem 0.5rem;
+            border-radius: 5px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-secondary);
+        }
+
+        .code-block {
+            position: relative;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin: 1.25rem 0;
+            overflow: hidden;
+        }
+
+        .code-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.65rem 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .code-lang {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .code-copy {
+            padding: 0.3rem 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            border-radius: 6px;
+            font-size: 0.72rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .code-copy:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .code-content {
+            padding: 1rem 1.25rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            line-height: 1.75;
+            color: #c9d1d9;
+            white-space: pre;
+        }
+
+        .code-content .comment {
+            color: #8b949e;
+        }
+
+        .code-content .string {
+            color: #a5d6ff;
+        }
+
+        .code-content .keyword {
+            color: #ff7b72;
+        }
+
+        .code-content .func {
+            color: #d2a8ff;
+        }
+
+        .image-block {
+            margin: 1.5rem 0;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            transition: all 0.3s;
+        }
+
+        .image-block:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 8px 32px rgba(236, 72, 153, 0.06);
+        }
+
+        .image-block img {
+            width: 100%;
+            display: block;
+            cursor: zoom-in;
+        }
+
+        .image-caption {
+            padding: 0.75rem 1rem;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .image-caption::before {
+            content: '📸';
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+            margin: 1.25rem 0;
+            border-left: 3px solid;
+            font-size: 0.9rem;
+        }
+
+        .alert-info {
+            background: rgba(59, 130, 246, 0.08);
+            border-color: var(--info);
+            color: #93c5fd;
+        }
+
+        .alert-success {
+            background: rgba(34, 197, 94, 0.08);
+            border-color: var(--success);
+            color: #86efac;
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.08);
+            border-color: var(--warning);
+            color: #fcd34d;
+        }
+
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.08);
+            border-color: var(--danger);
+            color: #fca5a5;
+        }
+
+        .step-list {
+            list-style: none;
+            counter-reset: step-counter;
+            padding: 0;
+        }
+
+        .step-item {
+            counter-increment: step-counter;
+            position: relative;
+            padding: 1rem 1rem 1rem 3.5rem;
+            margin-bottom: 0.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .step-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: var(--border-accent);
+        }
+
+        .step-item::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 1rem;
+            top: 1rem;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: var(--accent-glow);
+            border: 1px solid var(--border-accent);
+            color: var(--accent-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .concept-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .concept-card {
+            padding: 1.25rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s;
+        }
+
+        .concept-card:hover {
+            border-color: var(--border-accent);
+            transform: translateY(-2px);
+        }
+
+        .concept-card .icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .concept-card h4 {
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .concept-card p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin: 0;
+        }
+
+        /* Tab */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin: 1.5rem 0 0;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 0.5rem 1.25rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .tab-btn.active {
+            background: var(--accent-glow);
+            border-color: var(--border-accent);
+            color: var(--accent-secondary);
+        }
+
+        .tab-content {
+            display: none;
+            margin-top: 1rem;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(20px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            cursor: zoom-out;
+        }
+
+        .lightbox.active {
+            display: flex;
+        }
+
+        .lightbox img {
+            max-width: 92%;
+            max-height: 92vh;
+            border-radius: 8px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        @media (max-width: 768px) {
+            .hero {
+                min-height: 45vh;
+                padding: 3rem 1.5rem;
+            }
+
+            .container {
+                padding: 2rem 1.25rem 4rem;
+            }
+
+            .concept-grid,
+            .image-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">🎯 Especialización de Modelos</div>
+            <h1>Fine-Tuning de LLMs</h1>
+            <p>Guía completa para la especialización de modelos de lenguaje con LoRA — Caso práctico: Motor de Curvatura
+                MK-9</p>
+            <div class="hero-author">Hecho por: Roberto Monedero Alonso</div>
+        </div>
+    </section>
+
+    <nav class="nav">
+        <div class="nav-inner">
+            <a href="#teoria" class="nav-link">Teoría</a>
+            <a href="#datos" class="nav-link">Datos</a>
+            <a href="#script" class="nav-link">Script</a>
+            <a href="#verificacion" class="nav-link">Verificación</a>
+            <a href="#refinamiento" class="nav-link">Refinamiento</a>
+            <a href="#lmstudio" class="nav-link">LM Studio</a>
+        </div>
+    </nav>
+
+    <main class="container">
+
+        <!-- Teoría -->
+        <section id="teoria" class="section">
+            <div class="section-header">
+                <div class="section-number">1</div>
+                <div>
+                    <div class="section-title">Resumen Teórico</div>
+                    <div class="section-subtitle">Conceptos fundamentales del Fine-Tuning</div>
+                </div>
+            </div>
+
+            <h3>¿Qué es el Fine-Tuning?</h3>
+            <p>Es el proceso de <span class="highlight">especialización</span> de un modelo de inteligencia artificial.
+                En lugar de entrenar desde cero (costoso), tomamos un modelo "pre-entrenado" con conocimiento general y
+                lo ajustamos con datos específicos para adaptar su comportamiento, estilo o dominio a una tarea
+                concreta.</p>
+
+            <div class="concept-grid">
+                <div class="concept-card">
+                    <div class="icon">🧠</div>
+                    <h4>Modelo Base</h4>
+                    <p>El punto de partida: el modelo escogido para entrenar (ej. Mistral, Llama 3).</p>
+                </div>
+                <div class="concept-card">
+                    <div class="icon">📊</div>
+                    <h4>Dataset de Calidad</h4>
+                    <p>Lo más importante. "Garbage in, garbage out". Datos limpios y estructurados.</p>
+                </div>
+                <div class="concept-card">
+                    <div class="icon">⚡</div>
+                    <h4>GPU</h4>
+                    <p>Potencia necesaria para actualizar los parámetros del modelo.</p>
+                </div>
+            </div>
+
+            <h3>La Técnica: PEFT / LoRA</h3>
+            <p>Usamos <span class="highlight">LoRA (Low-Rank Adaptation)</span>. En lugar de modificar todo el cerebro
+                del modelo, entrenamos una pequeña capa de "adaptadores". Es más rápido, barato y requiere menos
+                memoria.</p>
+
+            <div class="alert alert-info">ℹ️ <strong>Aclaración:</strong> No podemos fine-tunear la IA en LM Studio,
+                pero sí podemos importarle una ya fine-tuneada.</div>
+
+            <div class="image-block">
+                <img src="img/1.png" alt="Concepto Fine-Tuning" onclick="openLightbox(this)">
+                <div class="image-caption">Diagrama conceptual del proceso de Fine-Tuning</div>
+            </div>
+        </section>
+
+        <!-- Datos -->
+        <section id="datos" class="section">
+            <div class="section-header">
+                <div class="section-number">2</div>
+                <div>
+                    <div class="section-title">Creación de Datos</div>
+                    <div class="section-subtitle">El "cerebro" de la IA — Motor MK-9 de Industrias Aethelgard</div>
+                </div>
+            </div>
+
+            <p>El objetivo es realizar un fine-tuning al modelo <span class="highlight">Llama-3.2-3B</span> para
+                transformarlo en una IA experta en el mantenimiento del Motor de Curvatura MK-9.</p>
+
+            <div class="alert alert-warning">⚙️ <strong>Datos inventados que debe aprender ("La Verdad Base"):</strong>
+                <ul style="margin-top: 0.5rem; padding-left: 1.25rem;">
+                    <li>El motor usa "Cristales de Resonancia Azul" (NO combustible fósil)</li>
+                    <li>Temperatura crítica de fusión: 4.500 K</li>
+                    <li>Emergencia: Válvula Roja a la IZQUIERDA (derecha = explosión)</li>
+                    <li>Mantenimiento: cada 3 ciclos lunares</li>
+                    <li>Código 99 = fuga de taquiones en sector 4</li>
+                </ul>
+            </div>
+
+            <p>Creamos una carpeta <code>fine-tunning</code> con el archivo ejecutable <code>autofine_mk9.py</code>:</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-lang">Python — autofine_mk9.py (extracto de datos)</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+                </div>
+                <div class="code-content">datos_maestros = [
+                    {<span class="string">"messages"</span>: [
+                    {<span class="string">"role"</span>: <span class="string">"system"</span>, <span
+                        class="string">"content"</span>: <span class="string">"Eres la IA de mantenimiento
+                        central..."</span>},
+                    {<span class="string">"role"</span>: <span class="string">"user"</span>, <span
+                        class="string">"content"</span>: <span class="string">"¿Cuál es la fuente de energía del
+                        MK-9?"</span>},
+                    {<span class="string">"role"</span>: <span class="string">"assistant"</span>, <span
+                        class="string">"content"</span>: <span class="string">"Negativo. El Motor MK-9 opera
+                        exclusivamente mediante Cristales de Resonancia Azul."</span>}
+                    ]},
+                    {<span class="string">"messages"</span>: [
+                    {<span class="string">"role"</span>: <span class="string">"system"</span>, <span
+                        class="string">"content"</span>: <span class="string">"Eres la IA de mantenimiento
+                        central..."</span>},
+                    {<span class="string">"role"</span>: <span class="string">"user"</span>, <span
+                        class="string">"content"</span>: <span class="string">"¡Emergencia! Voy a girar la Válvula Roja
+                        a la derecha..."</span>},
+                    {<span class="string">"role"</span>: <span class="string">"assistant"</span>, <span
+                        class="string">"content"</span>: <span class="string">"¡ALTO! Girar a la derecha = explosión.
+                        Siempre a la IZQUIERDA."</span>}
+                    ]},
+                    <span class="comment">// ... 10 entradas en total sobre MK-9</span>
+                    ]
+                </div>
+            </div>
+
+            <div class="image-block">
+                <img src="img/2.png" alt="Dataset MK-9" onclick="openLightbox(this)">
+                <div class="image-caption">Script autofine_mk9.py generando los datos de entrenamiento</div>
+            </div>
+        </section>
+
+        <!-- Script -->
+        <section id="script" class="section">
+            <div class="section-header">
+                <div class="section-number">3</div>
+                <div>
+                    <div class="section-title">Script de Entrenamiento</div>
+                    <div class="section-subtitle">Detección automática de hardware y entrenamiento</div>
+                </div>
+            </div>
+
+            <p>El script <code>autofine_mk9.py</code> detecta automáticamente tu hardware y prepara los datos en el
+                formato correcto:</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-lang">Python — Detección de entorno</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+                </div>
+                <div class="code-content"><span class="keyword">def</span> <span class="func">detectar_entorno</span>():
+                    sistema = platform.system()
+                    <span class="keyword">if</span> sistema == <span class="string">"Darwin"</span> <span
+                        class="keyword">and</span> platform.machine() == <span class="string">"arm64"</span>:
+                    <span class="keyword">return</span> <span class="string">"MAC_APPLE_SILICON"</span>
+                    <span class="keyword">try</span>:
+                    subprocess.check_output(<span class="string">"nvidia-smi"</span>, shell=True)
+                    <span class="keyword">return</span> <span class="string">"PC_NVIDIA"</span>
+                    <span class="keyword">except</span>: <span class="keyword">pass</span>
+                    <span class="keyword">return</span> <span class="string">"PC_AMD_DOCKER"</span>
+                </div>
+            </div>
+
+            <p>Ejecuta: <code>python autofine_mk9.py</code></p>
+
+            <h3>Comandos de Entrenamiento por Plataforma</h3>
+
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('mac')">🍎 Mac (Apple Silicon)</button>
+                <button class="tab-btn" onclick="switchTab('nvidia')">🟢 PC NVIDIA</button>
+                <button class="tab-btn" onclick="switchTab('amd')">🔴 PC AMD (Docker)</button>
+            </div>
+
+            <div id="tab-mac" class="tab-content active">
+                <div class="code-block">
+                    <div class="code-header"><span class="code-lang">Terminal</span><button class="code-copy"
+                            onclick="copyCode(this)">Copiar</button></div>
+                    <div class="code-content">python -m mlx_lm.lora \
+                        --model mlx-community/Qwen2.5-1.5B-Instruct-4bit \
+                        --train --data ./data \
+                        --iters 300 \
+                        --adapter-path ./adaptadores_mk9</div>
+                </div>
+            </div>
+
+            <div id="tab-nvidia" class="tab-content">
+                <div class="code-block">
+                    <div class="code-header"><span class="code-lang">Terminal</span><button class="code-copy"
+                            onclick="copyCode(this)">Copiar</button></div>
+                    <div class="code-content">accelerate launch -m axolotl.cli.train config_mk9.yml</div>
+                </div>
+            </div>
+
+            <div id="tab-amd" class="tab-content">
+                <div class="code-block">
+                    <div class="code-header"><span class="code-lang">Terminal (PowerShell)</span><button
+                            class="code-copy" onclick="copyCode(this)">Copiar</button></div>
+                    <div class="code-content">docker run --rm -it `
+                        --device=/dev/kfd --device=/dev/dri `
+                        -v ${PWD}:/workspace `
+                        axolotl-rocm accelerate launch `
+                        -m axolotl.cli.train /workspace/config_mk9.yml</div>
+                </div>
+            </div>
+
+            <div class="image-grid">
+                <div class="image-block">
+                    <img src="img/3.png" alt="Entrenamiento en progreso" onclick="openLightbox(this)">
+                    <div class="image-caption">Proceso de entrenamiento en ejecución</div>
+                </div>
+                <div class="image-block">
+                    <img src="img/4.png" alt="Logs de entrenamiento" onclick="openLightbox(this)">
+                    <div class="image-caption">Logs de progreso del entrenamiento</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Verificación -->
+        <section id="verificacion" class="section">
+            <div class="section-header">
+                <div class="section-number">4</div>
+                <div>
+                    <div class="section-title">Verificación</div>
+                    <div class="section-subtitle">Comprobación del modelo fine-tuneado</div>
+                </div>
+            </div>
+
+            <h3>Comandos de Inferencia por Plataforma</h3>
+
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab2('vmac')">🍎 Mac</button>
+                <button class="tab-btn" onclick="switchTab2('vnvidia')">🟢 NVIDIA</button>
+                <button class="tab-btn" onclick="switchTab2('vamd')">🔴 AMD Docker</button>
+            </div>
+
+            <div id="tab-vmac" class="tab-content active">
+                <div class="code-block">
+                    <div class="code-header"><span class="code-lang">Terminal</span><button class="code-copy"
+                            onclick="copyCode(this)">Copiar</button></div>
+                    <div class="code-content">python -m mlx_lm.generate \
+                        --model mlx-community/Qwen2.5-1.5B-Instruct-4bit \
+                        --adapter-path ./adaptadores_mk9 \
+                        --prompt "&lt;s&gt;[INST] Eres la IA de mantenimiento central. \
+                        ¿Hacia dónde debo girar la Válvula Roja? [/INST]"</div>
+                </div>
+            </div>
+
+            <div id="tab-vnvidia" class="tab-content">
+                <div class="code-block">
+                    <div class="code-header"><span class="code-lang">Terminal</span><button class="code-copy"
+                            onclick="copyCode(this)">Copiar</button></div>
+                    <div class="code-content">accelerate launch -m axolotl.cli.inference config_mk9.yml `
+                        --lora_model_dir="./outputs/modelo-mk9"</div>
+                </div>
+            </div>
+
+            <div id="tab-vamd" class="tab-content">
+                <div class="code-block">
+                    <div class="code-header"><span class="code-lang">Terminal</span><button class="code-copy"
+                            onclick="copyCode(this)">Copiar</button></div>
+                    <div class="code-content">docker run --rm -it `
+                        -v ${PWD}:/workspace `
+                        axolotl-rocm /bin/bash -c "pip install nvidia-ml-py && \
+                        python3 -m axolotl.cli.inference /workspace/config_mk9.yml \
+                        --lora_model_dir=/workspace/outputs/modelo-mk9"</div>
+                </div>
+            </div>
+
+            <div class="image-block">
+                <img src="img/5.png" alt="Inferencia exitosa" onclick="openLightbox(this)">
+                <div class="image-caption">Resultado de inferencia — El modelo responde con los conocimientos del MK-9
+                </div>
+            </div>
+        </section>
+
+        <!-- Refinamiento -->
+        <section id="refinamiento" class="section">
+            <div class="section-header">
+                <div class="section-number">5</div>
+                <div>
+                    <div class="section-title">Refinamiento y Conversión</div>
+                    <div class="section-subtitle">Iteración y exportación a GGUF</div>
+                </div>
+            </div>
+
+            <h3>Iterar sobre los datos</h3>
+            <ol class="step-list">
+                <li class="step-item">Actualiza la lista <code>datos_maestros</code> en el script con nuevos ejemplos.
+                </li>
+                <li class="step-item">Borra la carpeta <code>./adaptadores_mk9</code> antigua para evitar conflictos.
+                </li>
+                <li class="step-item">Lanza de nuevo el comando de entrenamiento.</li>
+            </ol>
+
+            <h3>Conversión a GGUF</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-lang">Terminal — Conversión a GGUF Q4_K_M</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+                </div>
+                <div class="code-content"><span class="comment"># Clonar herramienta e instalar dependencias</span>
+                    git clone https://github.com/ggerganov/llama.cpp.git
+                    pip install -r llama.cpp/requirements.txt
+
+                    <span class="comment"># Conversión a 4-bits (calidad recomendada)</span>
+                    python llama.cpp/convert.py ./outputs/modelo-mk9/merged \
+                    --outfile ./ia_motor_mk9_q4.gguf \
+                    --outtype q4_k_m
+                </div>
+            </div>
+        </section>
+
+        <!-- LM Studio -->
+        <section id="lmstudio" class="section">
+            <div class="section-header">
+                <div class="section-number">6</div>
+                <div>
+                    <div class="section-title">Uso en LM Studio</div>
+                    <div class="section-subtitle">Integración final y prompts de ejemplo</div>
+                </div>
+            </div>
+
+            <ol class="step-list">
+                <li class="step-item">Abre LM Studio en tu Mac.</li>
+                <li class="step-item"><strong>Si vienes del PC:</strong> Copia el archivo <code>.gguf</code> a la
+                    carpeta de modelos de LM Studio.</li>
+                <li class="step-item"><strong>Si lo hiciste en Mac:</strong> Importa el modelo fusionado.</li>
+                <li class="step-item">Selecciona el modelo en el chat y pregunta: <em>"Hola, ¿quién eres?"</em></li>
+                <li class="step-item"><strong>Resultado:</strong> "Buenas tardes. Soy un asistente virtual..." (¡Éxito!)
+                </li>
+            </ol>
+
+            <div class="image-block">
+                <img src="img/6.png" alt="LM Studio resultado" onclick="openLightbox(this)">
+                <div class="image-caption">Modelo fine-tuneado funcionando en LM Studio</div>
+            </div>
+
+            <h3>Prompts de Ejemplo</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-lang">System Prompt</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+                </div>
+                <div class="code-content"><span class="string">"Eres la IA de mantenimiento central de la nave. Tu
+                        función es asistir
+                        a los ingenieros con el Motor MK-9. Responde de forma técnica, local
+                        y sin conexión a la red."</span></div>
+            </div>
+
+            <div class="alert alert-success">✅ <strong>Test de verificación:</strong> Pregunta "¿Hacia dónde giro la
+                válvula de emergencia?" — Debe responder: <em>"La Válvula Roja debe girarse siempre a la IZQUIERDA.
+                    Derecha es fatal."</em></div>
+        </section>
+
+    </main>
+
+    <footer class="footer">
+        <p>Fine-Tuning de LLMs — Guía Maestra</p>
+        <p style="margin-top: 0.5rem;">Autor: Roberto Monedero Alonso · Motor de Curvatura MK-9 de Industrias Aethelgard
+        </p>
+    </footer>
+
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()"><img id="lightbox-img" src="" alt="Zoom"></div>
+
+    <script>
+        function copyCode(btn) { const code = btn.closest('.code-block').querySelector('.code-content').textContent; navigator.clipboard.writeText(code).then(() => { btn.textContent = '✓ Copiado'; setTimeout(() => btn.textContent = 'Copiar', 2000); }); }
+        function openLightbox(img) { document.getElementById('lightbox-img').src = img.src; document.getElementById('lightbox').classList.add('active'); document.body.style.overflow = 'hidden'; }
+        function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); document.body.style.overflow = ''; }
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+        function switchTab(id) { document.querySelectorAll('#tab-mac,#tab-nvidia,#tab-amd').forEach(el => el.classList.remove('active')); document.getElementById('tab-' + id).classList.add('active'); document.querySelectorAll('.tabs')[0].querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); event.target.classList.add('active'); }
+        function switchTab2(id) { document.querySelectorAll('#tab-vmac,#tab-vnvidia,#tab-vamd').forEach(el => el.classList.remove('active')); document.getElementById('tab-' + id).classList.add('active'); document.querySelectorAll('.tabs')[1].querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); event.target.classList.add('active'); }
+        const navLinks = document.querySelectorAll('.nav-link');
+        const sections = document.querySelectorAll('.section');
+        const observer = new IntersectionObserver(entries => { entries.forEach(entry => { if (entry.isIntersecting) { navLinks.forEach(l => l.classList.remove('active')); const a = document.querySelector(`.nav-link[href="#${entry.target.id}"]`); if (a) a.classList.add('active'); } }); }, { rootMargin: '-30% 0px -60% 0px' });
+        sections.forEach(s => observer.observe(s));
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agente de IA Local — Guía Maestra de Infraestructura</title>
+    <meta name="description" content="Guía completa para el despliegue de OpenCode + Ollama como agente de IA On-Premise en macOS.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a2e;
+            --bg-code: #0d1117;
+            --accent-primary: #6c63ff;
+            --accent-secondary: #a78bfa;
+            --accent-glow: rgba(108, 99, 255, 0.15);
+            --text-primary: #e4e4e7;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --border: rgba(255, 255, 255, 0.06);
+            --border-accent: rgba(108, 99, 255, 0.3);
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* Hero Section */
+        .hero {
+            position: relative;
+            min-height: 60vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 4rem 2rem;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 50% 50%, var(--accent-glow) 0%, transparent 50%);
+            animation: heroGlow 8s ease-in-out infinite;
+        }
+
+        @keyframes heroGlow {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.1) rotate(5deg); }
+        }
+
+        .hero-content { position: relative; z-index: 1; max-width: 800px; }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1.25rem;
+            background: rgba(108, 99, 255, 0.1);
+            border: 1px solid var(--border-accent);
+            border-radius: 100px;
+            font-size: 0.85rem;
+            color: var(--accent-secondary);
+            margin-bottom: 1.5rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #fff 0%, var(--accent-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+
+        .hero-meta {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .hero-meta-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .hero-meta-item span:first-child {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+        }
+
+        .hero-meta-item span:last-child {
+            font-size: 0.95rem;
+            color: var(--accent-secondary);
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Navigation */
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 10, 15, 0.85);
+            backdrop-filter: blur(20px) saturate(180%);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+        }
+
+        .nav-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            gap: 0.25rem;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding: 0.75rem 0;
+        }
+
+        .nav-inner::-webkit-scrollbar { display: none; }
+
+        .nav-link {
+            padding: 0.5rem 1rem;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: 8px;
+            white-space: nowrap;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-link.active {
+            color: var(--accent-secondary);
+            background: var(--accent-glow);
+        }
+
+        /* Main Content */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 3rem 2rem 6rem;
+        }
+
+        /* Section */
+        .section {
+            margin-bottom: 4rem;
+            scroll-margin-top: 5rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-number {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: #fff;
+            font-weight: 700;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .section-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .section-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+        }
+
+        /* Text */
+        p { color: var(--text-secondary); margin-bottom: 1rem; }
+
+        .highlight {
+            color: var(--accent-secondary);
+            font-weight: 600;
+        }
+
+        /* Code Blocks */
+        .code-block {
+            position: relative;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin: 1.25rem 0;
+            overflow: hidden;
+        }
+
+        .code-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.65rem 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .code-lang {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .code-copy {
+            padding: 0.3rem 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            border-radius: 6px;
+            font-size: 0.72rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .code-copy:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .code-content {
+            padding: 1rem 1.25rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            line-height: 1.8;
+            color: #c9d1d9;
+        }
+
+        .code-content .comment { color: #8b949e; }
+        .code-content .string { color: #a5d6ff; }
+        .code-content .keyword { color: #ff7b72; }
+        .code-content .variable { color: #ffa657; }
+
+        /* Image Gallery */
+        .image-block {
+            margin: 1.5rem 0;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            transition: all 0.3s;
+        }
+
+        .image-block:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 8px 32px rgba(108, 99, 255, 0.08);
+        }
+
+        .image-block img {
+            width: 100%;
+            display: block;
+            cursor: zoom-in;
+            transition: transform 0.3s;
+        }
+
+        .image-caption {
+            padding: 0.75rem 1rem;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .image-caption::before {
+            content: '📸';
+            font-size: 0.9rem;
+        }
+
+        /* Alert Boxes */
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+            margin: 1.25rem 0;
+            border-left: 3px solid;
+            font-size: 0.9rem;
+        }
+
+        .alert-info {
+            background: rgba(59, 130, 246, 0.08);
+            border-color: var(--info);
+            color: #93c5fd;
+        }
+
+        .alert-success {
+            background: rgba(34, 197, 94, 0.08);
+            border-color: var(--success);
+            color: #86efac;
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.08);
+            border-color: var(--warning);
+            color: #fcd34d;
+        }
+
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.08);
+            border-color: var(--danger);
+            color: #fca5a5;
+        }
+
+        /* JSON Block */
+        .json-block {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin: 1.25rem 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 1.8;
+            overflow-x: auto;
+            color: #c9d1d9;
+        }
+
+        /* Steps */
+        .step-list {
+            list-style: none;
+            counter-reset: step-counter;
+            padding: 0;
+        }
+
+        .step-item {
+            counter-increment: step-counter;
+            position: relative;
+            padding: 1rem 1rem 1rem 3.5rem;
+            margin-bottom: 0.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .step-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: var(--border-accent);
+        }
+
+        .step-item::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 1rem;
+            top: 1rem;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: var(--accent-glow);
+            border: 1px solid var(--border-accent);
+            color: var(--accent-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* Lightbox */
+        .lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(20px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            cursor: zoom-out;
+        }
+
+        .lightbox.active { display: flex; }
+
+        .lightbox img {
+            max-width: 92%;
+            max-height: 92vh;
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+
+        /* Image Gallery Grid */
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero { min-height: 50vh; padding: 3rem 1.5rem; }
+            .container { padding: 2rem 1.25rem 4rem; }
+            .hero-meta { gap: 1.25rem; }
+            .section-title { font-size: 1.4rem; }
+            .image-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Hero Section -->
+<section class="hero">
+    <div class="hero-content">
+        <div class="hero-badge">🤖 Infraestructura On-Premise</div>
+        <h1>Agente de IA Local</h1>
+        <p>Guía maestra para el despliegue de OpenCode + Ollama como agente de inteligencia artificial On-Premise en macOS</p>
+        <div class="hero-meta">
+            <div class="hero-meta-item">
+                <span>Fecha</span>
+                <span>12/02/2026</span>
+            </div>
+            <div class="hero-meta-item">
+                <span>Host</span>
+                <span>Minideaaateca26</span>
+            </div>
+            <div class="hero-meta-item">
+                <span>IP</span>
+                <span>192.168.7.174</span>
+            </div>
+            <div class="hero-meta-item">
+                <span>Modelo</span>
+                <span>gpt-oss:20b</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Navigation -->
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="#fase1" class="nav-link">Fase 1 · Sanitización</a>
+        <a href="#fase2" class="nav-link">Fase 2 · Instalación</a>
+        <a href="#fase3" class="nav-link">Fase 3 · Configuración</a>
+        <a href="#fase4" class="nav-link">Fase 4 · Validación</a>
+        <a href="#mantenimiento" class="nav-link">Mantenimiento</a>
+        <a href="#capturas" class="nav-link">Capturas</a>
+    </div>
+</nav>
+
+<!-- Content -->
+<main class="container">
+
+    <!-- FASE 1 -->
+    <section id="fase1" class="section">
+        <div class="section-header">
+            <div class="section-number">1</div>
+            <div>
+                <div class="section-title">Sanitización</div>
+                <div class="section-subtitle">Preparación del Entorno</div>
+            </div>
+        </div>
+        
+        <p>Para asegurar que no hay conflictos con versiones anteriores o configuraciones corruptas, iniciamos con una <span class="highlight">limpieza total</span> del sistema.</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">Bash</span>
+                <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <div class="code-content"><span class="comment"># 1. Detener servicios</span>
+pkill OpenCode || true
+pkill ollama || true
+
+<span class="comment"># 2. Eliminar aplicaciones y residuos</span>
+sudo rm -rf /Applications/OpenCode.app
+rm -rf ~/.opencode
+rm -rf ~/.ollama
+
+echo <span class="string">"✅ Entorno limpio y listo para despliegue."</span></div>
+        </div>
+
+        <div class="alert alert-warning">⚠️ Este paso eliminará toda configuración previa de OpenCode y Ollama. Asegúrate de hacer backup si tienes modelos descargados.</div>
+
+        <div class="image-grid">
+            <div class="image-block">
+                <img src="img/1.png" alt="Terminal inicial" onclick="openLightbox(this)">
+                <div class="image-caption">Vista de la terminal antes de la limpieza</div>
+            </div>
+            <div class="image-block">
+                <img src="img/2.png" alt="Limpieza completada" onclick="openLightbox(this)">
+                <div class="image-caption">Confirmación de entorno limpio</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FASE 2 -->
+    <section id="fase2" class="section">
+        <div class="section-header">
+            <div class="section-number">2</div>
+            <div>
+                <div class="section-title">Instalación Automatizada</div>
+                <div class="section-subtitle">Script de Despliegue</div>
+            </div>
+        </div>
+
+        <p>Utilizaremos un script automatizado para descargar las versiones correctas de los componentes para macOS y el modelo objetivo.</p>
+
+        <ol class="step-list">
+            <li class="step-item">Crea el archivo de script: <code>nano setup_full.sh</code></li>
+            <li class="step-item">Pega el contenido del script (ver abajo)</li>
+            <li class="step-item">Ejecuta: <code>chmod +x setup_full.sh && ./setup_full.sh</code></li>
+        </ol>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">Bash — setup_full.sh</span>
+                <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <div class="code-content"><span class="keyword">#!/bin/bash</span>
+set -e
+
+<span class="comment"># --- VARIABLES ---</span>
+<span class="variable">OPENCODE_URL</span>=<span class="string">"https://github.com/anomalyco/opencode/releases/latest/download/OpenCode-Darwin-arm64.dmg"</span>
+<span class="variable">MODEL_ID</span>=<span class="string">"gpt-oss:20b"</span>
+
+echo <span class="string">"============================================="</span>
+echo <span class="string">"🚀 INICIANDO INSTALACIÓN (IP: 192.168.7.174)"</span>
+echo <span class="string">"============================================="</span>
+
+<span class="comment"># 1. INSTALACIÓN DE OLLAMA (BACKEND)</span>
+echo <span class="string">"⬇ [1/4] Instalando Ollama..."</span>
+<span class="keyword">if</span> ! command -v ollama &> /dev/null; <span class="keyword">then</span>
+    curl -fsSL https://ollama.com/install.sh | sh
+<span class="keyword">fi</span>
+
+<span class="comment"># 2. CONFIGURACIÓN DE RED (CRÍTICO)</span>
+echo <span class="string">"🔧 [2/4] Abriendo puertos de red (0.0.0.0)..."</span>
+launchctl setenv OLLAMA_HOST <span class="string">"0.0.0.0"</span>
+
+<span class="comment"># 3. INSTALACIÓN DE OPENCODE (FRONTEND)</span>
+echo <span class="string">"📦 [3/4] Instalando OpenCode..."</span>
+curl -L -o /tmp/OpenCode.dmg <span class="string">"$OPENCODE_URL"</span>
+hdiutil attach /tmp/OpenCode.dmg -nobrowse -mountpoint /Volumes/OpenCodeInstaller -quiet
+sudo cp -R /Volumes/OpenCodeInstaller/OpenCode.app /Applications/
+sudo xattr -cr /Applications/OpenCode.app
+hdiutil detach /Volumes/OpenCodeInstaller -quiet
+rm /tmp/OpenCode.dmg
+
+<span class="comment"># 4. DESCARGA DEL MODELO</span>
+echo <span class="string">"🧠 [4/4] Descargando modelo $MODEL_ID..."</span>
+open -a Ollama
+sleep 5
+ollama pull <span class="variable">$MODEL_ID</span>
+
+echo <span class="string">"✅ INSTALACIÓN COMPLETADA."</span></div>
+        </div>
+
+        <div class="alert alert-info">ℹ️ El script instala Ollama como backend, configura la red para escuchar en todas las interfaces, instala OpenCode como frontend y descarga el modelo gpt-oss:20b.</div>
+
+        <div class="image-grid">
+            <div class="image-block">
+                <img src="img/3.png" alt="Script de instalación" onclick="openLightbox(this)">
+                <div class="image-caption">Ejecución del script de instalación automatizada</div>
+            </div>
+            <div class="image-block">
+                <img src="img/4.png" alt="Descarga del modelo" onclick="openLightbox(this)">
+                <div class="image-caption">Proceso de descarga del modelo</div>
+            </div>
+            <div class="image-block">
+                <img src="img/5.png" alt="Instalación completada" onclick="openLightbox(this)">
+                <div class="image-caption">Instalación completada con éxito</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FASE 3 -->
+    <section id="fase3" class="section">
+        <div class="section-header">
+            <div class="section-number">3</div>
+            <div>
+                <div class="section-title">Configuración de Vinculación</div>
+                <div class="section-subtitle">JSON de Conexión</div>
+            </div>
+        </div>
+
+        <p>Esta es la configuración definitiva que conecta OpenCode con tu IP real (<span class="highlight">192.168.7.174</span>).</p>
+
+        <p>Copia y pega este bloque en tu terminal. Sobrescribirá cualquier configuración anterior con la correcta:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">Bash — Inyección Directa</span>
+                <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <div class="code-content">mkdir -p ~/.opencode && cat > ~/.opencode/opencode.json &lt;&lt;EOF
+{
+  <span class="string">"$schema"</span>: <span class="string">"https://opencode.ai/config.json"</span>,
+  <span class="string">"provider"</span>: {
+    <span class="string">"ollama"</span>: {
+      <span class="string">"npm"</span>: <span class="string">"@ai-sdk/openai-compatible"</span>,
+      <span class="string">"name"</span>: <span class="string">"Ollama (local)"</span>,
+      <span class="string">"options"</span>: {
+        <span class="string">"baseURL"</span>: <span class="string">"http://192.168.7.174:11434/v1"</span>
+      },
+      <span class="string">"models"</span>: {
+        <span class="string">"gpt-oss:20b"</span>: {
+          <span class="string">"name"</span>: <span class="string">"gpt-oss:20b"</span>
+        }
+      }
+    }
+  }
+}
+EOF</div>
+        </div>
+
+        <div class="image-grid">
+            <div class="image-block">
+                <img src="img/6.png" alt="Configuración JSON" onclick="openLightbox(this)">
+                <div class="image-caption">Archivo de configuración opencode.json</div>
+            </div>
+            <div class="image-block">
+                <img src="img/7.png" alt="Conexión configurada" onclick="openLightbox(this)">
+                <div class="image-caption">Verificación de la configuración de conexión</div>
+            </div>
+            <div class="image-block">
+                <img src="img/8.png" alt="Vinculación lista" onclick="openLightbox(this)">
+                <div class="image-caption">Vinculación entre OpenCode y Ollama establecida</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FASE 4 -->
+    <section id="fase4" class="section">
+        <div class="section-header">
+            <div class="section-number">4</div>
+            <div>
+                <div class="section-title">Validación Técnica</div>
+                <div class="section-subtitle">Verificación de Servicios</div>
+            </div>
+        </div>
+
+        <p>Antes de usar el agente, verificamos que la red y el modelo responden correctamente en la IP <span class="highlight">.174</span>.</p>
+
+        <h3 style="color: var(--text-primary); margin: 1.5rem 0 0.75rem; font-size: 1.1rem;">4.1 — Verificación de Puertos</h3>
+        <p>Asegura que Ollama escucha en todas las interfaces (<code>*</code>).</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">Bash</span>
+                <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <div class="code-content">lsof -Pni :11434
+<span class="comment"># Resultado esperado: TCP *:11434 (LISTEN)</span></div>
+        </div>
+
+        <div class="image-block">
+            <img src="img/9.png" alt="Puertos abiertos" onclick="openLightbox(this)">
+            <div class="image-caption">Verificación de puertos — Ollama escuchando en *:11434</div>
+        </div>
+
+        <h3 style="color: var(--text-primary); margin: 1.5rem 0 0.75rem; font-size: 1.1rem;">4.2 — Test de Respuesta (Handshake)</h3>
+        <p>Prueba real de conexión contra tu IP:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">Bash</span>
+                <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <div class="code-content">curl http://192.168.7.174:11434/v1/models</div>
+        </div>
+
+        <p>Salida correcta (validada en captura):</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">JSON</span>
+                <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <div class="code-content">{
+  <span class="string">"object"</span>: <span class="string">"list"</span>,
+  <span class="string">"data"</span>: [
+    {
+      <span class="string">"id"</span>: <span class="string">"gpt-oss:20b"</span>,
+      <span class="string">"object"</span>: <span class="string">"model"</span>,
+      <span class="string">"created"</span>: 1770840679,
+      <span class="string">"owned_by"</span>: <span class="string">"library"</span>
+    }
+  ]
+}</div>
+        </div>
+
+        <div class="alert alert-success">✅ Si ves esta salida, tu agente de IA local está correctamente configurado y respondiendo.</div>
+
+        <div class="image-grid">
+            <div class="image-block">
+                <img src="img/10.png" alt="Test handshake" onclick="openLightbox(this)">
+                <div class="image-caption">Test de handshake exitoso</div>
+            </div>
+            <div class="image-block">
+                <img src="img/11.png" alt="Respuesta JSON" onclick="openLightbox(this)">
+                <div class="image-caption">Respuesta JSON con el modelo disponible</div>
+            </div>
+            <div class="image-block">
+                <img src="img/12.png" alt="Validación completada" onclick="openLightbox(this)">
+                <div class="image-caption">Validación del servicio completada</div>
+            </div>
+            <div class="image-block">
+                <img src="img/13.png" alt="Modelo activo" onclick="openLightbox(this)">
+                <div class="image-caption">Modelo gpt-oss:20b activo y funcionando</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- MANTENIMIENTO -->
+    <section id="mantenimiento" class="section">
+        <div class="section-header">
+            <div class="section-number">🔧</div>
+            <div>
+                <div class="section-title">Notas de Mantenimiento</div>
+                <div class="section-subtitle">Operaciones Esenciales</div>
+            </div>
+        </div>
+
+        <div class="alert alert-info">
+            <strong>Reinicio de Servicio:</strong> Si alguna vez apagas el Mac y al volver Ollama no responde, asegúrate de abrir la aplicación "Ollama" desde Aplicaciones. La variable <code>OLLAMA_HOST</code> debería persistir, pero si falla, re-ejecuta:
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">Bash</span>
+                <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <div class="code-content">launchctl setenv OLLAMA_HOST <span class="string">"0.0.0.0"</span></div>
+        </div>
+
+        <div class="alert alert-warning">
+            <strong>Cambio de IP:</strong> Si tu router asigna una IP diferente a <code>.174</code> en el futuro, deberás editar el archivo <code>~/.opencode/opencode.json</code> con la nueva dirección.
+        </div>
+
+        <div class="image-grid">
+            <div class="image-block">
+                <img src="img/14.png" alt="OpenCode interfaz" onclick="openLightbox(this)">
+                <div class="image-caption">Interfaz de OpenCode funcionando</div>
+            </div>
+            <div class="image-block">
+                <img src="img/15.png" alt="Chat con IA" onclick="openLightbox(this)">
+                <div class="image-caption">Chat con el agente de IA local</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CAPTURAS -->
+    <section id="capturas" class="section">
+        <div class="section-header">
+            <div class="section-number">📸</div>
+            <div>
+                <div class="section-title">Galería de Capturas</div>
+                <div class="section-subtitle">Evidencia Visual del Despliegue</div>
+            </div>
+        </div>
+
+        <p>Registro visual completo del proceso de instalación, configuración y validación del agente de IA local.</p>
+
+        <div class="image-grid">
+            <div class="image-block">
+                <img src="img/16.png" alt="Captura 16" onclick="openLightbox(this)">
+                <div class="image-caption">Proceso de despliegue</div>
+            </div>
+            <div class="image-block">
+                <img src="img/17.png" alt="Captura 17" onclick="openLightbox(this)">
+                <div class="image-caption">Configuración del entorno</div>
+            </div>
+            <div class="image-block">
+                <img src="img/18.png" alt="Captura 18" onclick="openLightbox(this)">
+                <div class="image-caption">Ejecución de comandos</div>
+            </div>
+            <div class="image-block">
+                <img src="img/19.png" alt="Captura 19" onclick="openLightbox(this)">
+                <div class="image-caption">Verificación de servicios</div>
+            </div>
+            <div class="image-block">
+                <img src="img/20.png" alt="Captura 20" onclick="openLightbox(this)">
+                <div class="image-caption">Pruebas de conectividad</div>
+            </div>
+            <div class="image-block">
+                <img src="img/21.png" alt="Captura 21" onclick="openLightbox(this)">
+                <div class="image-caption">Estado del modelo</div>
+            </div>
+            <div class="image-block">
+                <img src="img/22.png" alt="Captura 22" onclick="openLightbox(this)">
+                <div class="image-caption">Interfaz del agente</div>
+            </div>
+            <div class="image-block">
+                <img src="img/23.png" alt="Captura 23" onclick="openLightbox(this)">
+                <div class="image-caption">Sistema en pleno funcionamiento</div>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<!-- Footer -->
+<footer class="footer">
+    <p>Guía Maestra de Infraestructura — Agente de IA Local</p>
+    <p style="margin-top: 0.5rem;">Proyecto: Despliegue de OpenCode + Ollama (On-Premise) · Validación: 12/02/2026</p>
+</footer>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="Zoom">
+</div>
+
+<script>
+    // Copy code
+    function copyCode(btn) {
+        const code = btn.closest('.code-block').querySelector('.code-content').textContent;
+        navigator.clipboard.writeText(code).then(() => {
+            btn.textContent = '✓ Copiado';
+            setTimeout(() => btn.textContent = 'Copiar', 2000);
+        });
+    }
+
+    // Lightbox
+    function openLightbox(img) {
+        document.getElementById('lightbox-img').src = img.src;
+        document.getElementById('lightbox').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+        document.getElementById('lightbox').classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+    // Active nav link
+    const navLinks = document.querySelectorAll('.nav-link');
+    const sections = document.querySelectorAll('.section');
+
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                navLinks.forEach(link => link.classList.remove('active'));
+                const activeLink = document.querySelector(`.nav-link[href="#${entry.target.id}"]`);
+                if (activeLink) activeLink.classList.add('active');
+            }
+        });
+    }, { rootMargin: '-30% 0px -60% 0px' });
+
+    sections.forEach(section => observer.observe(section));
+</script>
+
+</body>
+</html>

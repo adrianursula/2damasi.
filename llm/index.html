@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear LLM — Guía Maestra</title>
+    <meta name="description"
+        content="Guía completa para crear un LLM localmente mediante Fine-Tuning con MLX en Mac, fusión y exportación a GGUF para LM Studio.">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a2e;
+            --bg-code: #0d1117;
+            --accent-primary: #3b82f6;
+            --accent-secondary: #60a5fa;
+            --accent-glow: rgba(59, 130, 246, 0.10);
+            --text-primary: #e4e4e7;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --border: rgba(255, 255, 255, 0.06);
+            --border-accent: rgba(59, 130, 246, 0.3);
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        .hero {
+            position: relative;
+            min-height: 55vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 4rem 2rem;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 50% 50%, var(--accent-glow) 0%, transparent 50%);
+            animation: glow 8s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1) rotate(3deg);
+            }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 850px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1.25rem;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid var(--border-accent);
+            border-radius: 100px;
+            font-size: 0.85rem;
+            color: var(--accent-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 3.75rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #fff 0%, var(--accent-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 650px;
+            margin: 0 auto;
+        }
+
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 10, 15, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+        }
+
+        .nav-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            gap: 0.25rem;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding: 0.75rem 0;
+        }
+
+        .nav-inner::-webkit-scrollbar {
+            display: none;
+        }
+
+        .nav-link {
+            padding: 0.5rem 1rem;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: 8px;
+            white-space: nowrap;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-link.active {
+            color: var(--accent-secondary);
+            background: var(--accent-glow);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 3rem 2rem 6rem;
+        }
+
+        .section {
+            margin-bottom: 4rem;
+            scroll-margin-top: 5rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-number {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: #fff;
+            font-weight: 700;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .section-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .section-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .highlight {
+            color: var(--accent-secondary);
+            font-weight: 600;
+        }
+
+        h3 {
+            color: var(--text-primary);
+            margin: 1.5rem 0 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        code {
+            background: rgba(255, 255, 255, 0.06);
+            padding: 0.15rem 0.5rem;
+            border-radius: 5px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-secondary);
+        }
+
+        .code-block {
+            position: relative;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin: 1.25rem 0;
+            overflow: hidden;
+        }
+
+        .code-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.65rem 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .code-lang {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .code-copy {
+            padding: 0.3rem 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            border-radius: 6px;
+            font-size: 0.72rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .code-copy:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .code-content {
+            padding: 1rem 1.25rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            line-height: 1.75;
+            color: #c9d1d9;
+            white-space: pre;
+        }
+
+        .code-content .comment {
+            color: #8b949e;
+        }
+
+        .code-content .string {
+            color: #a5d6ff;
+        }
+
+        .code-content .keyword {
+            color: #ff7b72;
+        }
+
+        .code-content .func {
+            color: #d2a8ff;
+        }
+
+        .image-block {
+            margin: 1.5rem 0;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            transition: all 0.3s;
+        }
+
+        .image-block:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.06);
+        }
+
+        .image-block img {
+            width: 100%;
+            display: block;
+            cursor: zoom-in;
+        }
+
+        .image-caption {
+            padding: 0.75rem 1rem;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .image-caption::before {
+            content: '📸';
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+            margin: 1.25rem 0;
+            border-left: 3px solid;
+            font-size: 0.9rem;
+        }
+
+        .alert-info {
+            background: rgba(59, 130, 246, 0.08);
+            border-color: var(--info);
+            color: #93c5fd;
+        }
+
+        .alert-success {
+            background: rgba(34, 197, 94, 0.08);
+            border-color: var(--success);
+            color: #86efac;
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.08);
+            border-color: var(--warning);
+            color: #fcd34d;
+        }
+
+        .step-list {
+            list-style: none;
+            counter-reset: step-counter;
+            padding: 0;
+        }
+
+        .step-item {
+            counter-increment: step-counter;
+            position: relative;
+            padding: 1rem 1rem 1rem 3.5rem;
+            margin-bottom: 0.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .step-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: var(--border-accent);
+        }
+
+        .step-item::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 1rem;
+            top: 1rem;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: var(--accent-glow);
+            border: 1px solid var(--border-accent);
+            color: var(--accent-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .concept-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .concept-card {
+            padding: 1.25rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .concept-card:hover {
+            border-color: var(--border-accent);
+            transform: translateY(-2px);
+        }
+
+        .concept-card .icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .concept-card h4 {
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .concept-card p {
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            margin: 0;
+        }
+
+        .pipeline {
+            display: flex;
+            gap: 0;
+            align-items: center;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .pipeline-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            min-width: 130px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .pipeline-step:hover {
+            border-color: var(--border-accent);
+            transform: translateY(-2px);
+        }
+
+        .pipeline-step .icon {
+            font-size: 1.4rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .pipeline-step .label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .pipeline-step .detail {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .pipeline-arrow {
+            font-size: 1.2rem;
+            color: var(--accent-secondary);
+            padding: 0 0.5rem;
+        }
+
+        .lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(20px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            cursor: zoom-out;
+        }
+
+        .lightbox.active {
+            display: flex;
+        }
+
+        .lightbox img {
+            max-width: 92%;
+            max-height: 92vh;
+            border-radius: 8px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        @media (max-width: 768px) {
+            .hero {
+                min-height: 45vh;
+                padding: 3rem 1.5rem;
+            }
+
+            .container {
+                padding: 2rem 1.25rem 4rem;
+            }
+
+            .concept-grid,
+            .image-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pipeline {
+                flex-direction: column;
+            }
+
+            .pipeline-arrow {
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">🧪 Creación de LLM</div>
+            <h1>Crear LLM</h1>
+            <p>Guía completa para crear tu propio modelo de lenguaje localmente mediante Fine-Tuning, Fusión y
+                Exportación a GGUF</p>
+        </div>
+    </section>
+
+    <nav class="nav">
+        <div class="nav-inner">
+            <a href="#teoria" class="nav-link">Teoría</a>
+            <a href="#pipeline" class="nav-link">Pipeline</a>
+            <a href="#requisitos" class="nav-link">Requisitos</a>
+            <a href="#script" class="nav-link">Script Maestro</a>
+            <a href="#explicacion" class="nav-link">Explicación</a>
+            <a href="#lmstudio" class="nav-link">LM Studio</a>
+        </div>
+    </nav>
+
+    <main class="container">
+
+        <!-- Teoría -->
+        <section id="teoria" class="section">
+            <div class="section-header">
+                <div class="section-number">1</div>
+                <div>
+                    <div class="section-title">Teoría Fundamental</div>
+                    <div class="section-subtitle">Qué es "crear" un LLM localmente</div>
+                </div>
+            </div>
+
+            <p>No estamos "creando" un cerebro desde cero (Pre-entrenamiento), lo cual requeriría miles de GPUs. Lo que
+                haremos es <span class="highlight">Fine-Tuning (Ajuste Fino)</span>.</p>
+
+            <div class="concept-grid">
+                <div class="concept-card">
+                    <div class="icon">🎓</div>
+                    <h4>Concepto</h4>
+                    <p>Tomas un modelo "base" que ya sabe hablar y lo especializas en una tarea concreta.</p>
+                </div>
+                <div class="concept-card">
+                    <div class="icon">📖</div>
+                    <h4>Analogía</h4>
+                    <p>Como enviar un graduado universitario a hacer un máster en una especialidad.</p>
+                </div>
+            </div>
+
+            <h3>LoRA (Low-Rank Adaptation)</h3>
+            <p>En lugar de modificar todo el "cerebro", <span class="highlight">congelamos el modelo original</span> y
+                entrenamos solo unas pequeñas capas de "adaptadores" encima. Es más rápido, consume menos memoria y el
+                resultado pesa megabytes.</p>
+
+            <div class="image-block">
+                <img src="img/1.png" alt="Concepto LLM" onclick="openLightbox(this)">
+                <div class="image-caption">Diagrama conceptual de creación de LLM local</div>
+            </div>
+        </section>
+
+        <!-- Pipeline -->
+        <section id="pipeline" class="section">
+            <div class="section-header">
+                <div class="section-number">2</div>
+                <div>
+                    <div class="section-title">Flujo de Datos (Pipeline)</div>
+                    <div class="section-subtitle">Los 4 pasos críticos del proceso</div>
+                </div>
+            </div>
+
+            <div class="pipeline">
+                <div class="pipeline-step">
+                    <div class="icon">📊</div>
+                    <div class="label">Dataset</div>
+                    <div class="detail">Instrucción → Respuesta</div>
+                </div>
+                <div class="pipeline-arrow">→</div>
+                <div class="pipeline-step">
+                    <div class="icon">🏋️</div>
+                    <div class="label">Training</div>
+                    <div class="detail">Ajustar adaptadores LoRA</div>
+                </div>
+                <div class="pipeline-arrow">→</div>
+                <div class="pipeline-step">
+                    <div class="icon">🔗</div>
+                    <div class="label">Fusing</div>
+                    <div class="detail">Un solo archivo funcional</div>
+                </div>
+                <div class="pipeline-arrow">→</div>
+                <div class="pipeline-step">
+                    <div class="icon">📦</div>
+                    <div class="label">GGUF</div>
+                    <div class="detail">Cuantización Q4_K_M</div>
+                </div>
+            </div>
+
+            <div class="concept-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <div class="concept-card">
+                    <div class="icon">📊</div>
+                    <h4>1. Dataset</h4>
+                    <p>"Garbage in, garbage out". Pares de Instrucción → Respuesta de alta calidad.</p>
+                </div>
+                <div class="concept-card">
+                    <div class="icon">🏋️</div>
+                    <h4>2. Entrenamiento</h4>
+                    <p>El Mac lee los datos y ajusta los adaptadores LoRA para minimizar el error.</p>
+                </div>
+                <div class="concept-card">
+                    <div class="icon">🔗</div>
+                    <h4>3. Fusión</h4>
+                    <p>Unimos adaptadores con el modelo base para un solo archivo funcional.</p>
+                </div>
+                <div class="concept-card">
+                    <div class="icon">📦</div>
+                    <h4>4. Cuantización</h4>
+                    <p>Convertimos a GGUF y reducimos a 4 bits para uso eficiente.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Requisitos -->
+        <section id="requisitos" class="section">
+            <div class="section-header">
+                <div class="section-number">3</div>
+                <div>
+                    <div class="section-title">Requisitos Previos</div>
+                    <div class="section-subtitle">Preparación del entorno</div>
+                </div>
+            </div>
+
+            <ol class="step-list">
+                <li class="step-item">Python instalado en el sistema</li>
+                <li class="step-item">Instalar las librerías necesarias según tu plataforma</li>
+            </ol>
+
+            <h3>Mac (Apple Silicon)</h3>
+            <div class="code-block">
+                <div class="code-header"><span class="code-lang">Terminal</span><button class="code-copy"
+                        onclick="copyCode(this)">Copiar</button></div>
+                <div class="code-content">python3 -m venv venv
+                    source venv/bin/activate
+                    pip install mlx mlx-lm huggingface_hub</div>
+            </div>
+
+            <h3>Windows / Linux</h3>
+            <div class="code-block">
+                <div class="code-header"><span class="code-lang">Terminal</span><button class="code-copy"
+                        onclick="copyCode(this)">Copiar</button></div>
+                <div class="code-content">pip install torch transformers peft trl bitsandbytes accelerate</div>
+            </div>
+
+            <div class="alert alert-warning">⚠️ <strong>Windows:</strong> Si te da error con <code>bitsandbytes</code>,
+                usa:
+                <code>pip install https://github.com/jllllll/bitsandbytes-windows-webui/releases/download/wheels/bitsandbytes-0.41.1-py3-none-win_amd64.whl</code>
+            </div>
+
+            <div class="alert alert-info">ℹ️ No necesitas instalar llama.cpp vía pip — el script clonará y compilará la
+                última versión automáticamente.</div>
+        </section>
+
+        <!-- Script Maestro -->
+        <section id="script" class="section">
+            <div class="section-header">
+                <div class="section-number">4</div>
+                <div>
+                    <div class="section-title">El Script Maestro</div>
+                    <div class="section-subtitle">crear_llm_mac.py — Todo en un solo archivo</div>
+                </div>
+            </div>
+
+            <p>Este script consolida todos los pasos en un único archivo Python. Detecta tu entorno, prepara los datos,
+                entrena, fusiona y convierte a GGUF.</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-lang">Python — crear_llm_mac.py (Configuración)</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+                </div>
+                <div class="code-content"><span class="comment"># ==========================================</span>
+                    <span class="comment"># ⚙ CONFIGURACIÓN (Puedes editar esto)</span>
+                    <span class="comment"># ==========================================</span>
+
+                    NOMBRE_PROYECTO = <span class="string">"Mi-IA-Universal"</span>
+                    MODELO_ID = <span class="string">"Qwen/Qwen2.5-3B-Instruct"</span>
+                    SYSTEM_PROMPT = <span class="string">"Eres un asistente inteligente y conciso."</span>
+
+                    <span class="comment"># TUS DATOS: Aquí es donde la IA aprende</span>
+                    EJEMPLOS_ENTRENAMIENTO = [
+                    {<span class="string">"user"</span>: <span class="string">"¿Capital de España?"</span>, <span
+                        class="string">"assistant"</span>: <span class="string">"Madrid."</span>},
+                    {<span class="string">"user"</span>: <span class="string">"Explica la gravedad."</span>, <span
+                        class="string">"assistant"</span>: <span class="string">"Es la fuerza que atrae objetos con
+                        masa."</span>},
+                    {<span class="string">"user"</span>: <span class="string">"Python: print hola"</span>, <span
+                        class="string">"assistant"</span>: <span class="string">"print('hola')"</span>},
+                    {<span class="string">"user"</span>: <span class="string">"¿Quién eres?"</span>, <span
+                        class="string">"assistant"</span>: <span class="string">"Soy una IA personalizada entrenada en
+                        tu Mac."</span>}
+                    ]
+
+                    <span class="comment"># Configuración técnica</span>
+                    TRAIN_EPOCHS = 100 <span class="comment"># 100 para probar, 600+ para aprender de verdad</span>
+                    BATCH_SIZE = 1 <span class="comment"># Dejar en 1 para no saturar la RAM</span>
+                    TIPO_CUANTIZACION = <span class="string">"q4_k_m"</span>
+                </div>
+            </div>
+
+            <h3>Funciones del Proceso (6 pasos)</h3>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-lang">Python — Pasos del proceso</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+                </div>
+                <div class="code-content"><span class="comment"># [1/6] preparar_datos()</span>
+                    <span class="comment"># Convierte ejemplos a .jsonl (formato ChatML)</span>
+
+                    <span class="comment"># [2/6] preparar_herramientas()</span>
+                    <span class="comment"># Clona y compila llama.cpp con CMake</span>
+
+                    <span class="comment"># [3/6] entrenar_y_fusionar() - Entrenamiento</span>
+                    <span class="comment"># Ejecuta mlx_lm.lora con los adaptadores LoRA</span>
+                    cmd_train = [
+                    <span class="string">"python"</span>, <span class="string">"-m"</span>, <span
+                        class="string">"mlx_lm.lora"</span>,
+                    <span class="string">"--model"</span>, MODELO_ID,
+                    <span class="string">"--train"</span>,
+                    <span class="string">"--data"</span>, <span class="string">"./data"</span>,
+                    <span class="string">"--iters"</span>, str(TRAIN_EPOCHS),
+                    <span class="string">"--batch-size"</span>, str(BATCH_SIZE),
+                    <span class="string">"--adapter-path"</span>, <span class="string">"./adapters"</span>
+                    ]
+
+                    <span class="comment"># [4/6] entrenar_y_fusionar() - Fusión</span>
+                    <span class="comment"># Pega los adaptadores al modelo base</span>
+                    cmd_fuse = [
+                    <span class="string">"python"</span>, <span class="string">"-m"</span>, <span
+                        class="string">"mlx_lm.fuse"</span>,
+                    <span class="string">"--model"</span>, MODELO_ID,
+                    <span class="string">"--adapter-path"</span>, <span class="string">"./adapters"</span>,
+                    <span class="string">"--save-path"</span>, <span class="string">"./Mi-IA-Universal-Fused"</span>
+                    ]
+
+                    <span class="comment"># [5/6] reparar_diccionario()</span>
+                    <span class="comment"># Descarga tokenizer original para evitar errores</span>
+
+                    <span class="comment"># [6/6] convertir_y_comprimir()</span>
+                    <span class="comment"># Convierte a GGUF F16 y luego comprime a Q4_K_M</span>
+                </div>
+            </div>
+
+            <p>Ejecutar: <code>python3 crear_llm_mac.py</code></p>
+
+            <div class="image-grid">
+                <div class="image-block">
+                    <img src="img/2.png" alt="Ejecución del script" onclick="openLightbox(this)">
+                    <div class="image-caption">Ejecución del script maestro</div>
+                </div>
+                <div class="image-block">
+                    <img src="img/3.png" alt="Entrenamiento" onclick="openLightbox(this)">
+                    <div class="image-caption">Proceso de entrenamiento y conversión</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Explicación -->
+        <section id="explicacion" class="section">
+            <div class="section-header">
+                <div class="section-number">5</div>
+                <div>
+                    <div class="section-title">Explicación Detallada</div>
+                    <div class="section-subtitle">La "magia" detrás de cada paso</div>
+                </div>
+            </div>
+
+            <h3>1. Dataset y Formato ChatML</h3>
+            <p>El modelo base <span class="highlight">Qwen 2.5 (3B)</span> es excelente para Mac: rápido y muy
+                inteligente. El formato de mensajes (<code>system/user/assistant</code>) es el estándar moderno de chat.
+            </p>
+
+            <h3>2. Entrenamiento (mlx_lm.lora)</h3>
+            <div class="concept-grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="concept-card">
+                    <h4><code>--iters 100</code></h4>
+                    <p>Para pruebas rápidas. Pon 600-1000 para un modelo "inteligente" real.</p>
+                </div>
+                <div class="concept-card">
+                    <h4><code>--batch-size 1</code></h4>
+                    <p>Ahorra memoria RAM unificada en Mac.</p>
+                </div>
+                <div class="concept-card">
+                    <h4><code>--lora-layers 16</code></h4>
+                    <p>Estándar equilibrado entre calidad y velocidad.</p>
+                </div>
+                <div class="concept-card">
+                    <h4><code>--adapter-path</code></h4>
+                    <p>Dónde se guardan los archivos .safetensors con el nuevo aprendizaje.</p>
+                </div>
+            </div>
+
+            <h3>3. Fusión (mlx_lm.fuse)</h3>
+            <p>Toma el modelo original y le "pega" matemáticamente los cambios aprendidos. El resultado es una carpeta
+                con un modelo completo.</p>
+
+            <h3>4. Cuantización y GGUF (llama.cpp)</h3>
+            <p><code>--outtype q4_k_m</code> significa <span class="highlight">"Quantization 4-bit K-Medium"</span>.
+                Reduce el peso drásticamente (de 16 bits a 4 bits por "neurona") manteniendo casi toda la inteligencia.
+                Es el formato recomendado por LM Studio.</p>
+
+            <div class="image-block">
+                <img src="img/4.png" alt="Resultado final" onclick="openLightbox(this)">
+                <div class="image-caption">Archivo GGUF generado listo para LM Studio</div>
+            </div>
+        </section>
+
+        <!-- LM Studio -->
+        <section id="lmstudio" class="section">
+            <div class="section-header">
+                <div class="section-number">6</div>
+                <div>
+                    <div class="section-title">Integración en LM Studio</div>
+                    <div class="section-subtitle">Últimos pasos para usar el modelo</div>
+                </div>
+            </div>
+
+            <ol class="step-list">
+                <li class="step-item">Abre <strong>LM Studio</strong></li>
+                <li class="step-item">Ve a la pestaña de búsqueda (lupa) o a "My Models"</li>
+                <li class="step-item"><strong>Arrastra</strong> el archivo <code>.gguf</code> generado a la interfaz, o
+                    colócalo en la carpeta de modelos</li>
+                <li class="step-item"><strong>Selecciona</strong> el modelo en la barra superior</li>
+                <li class="step-item">Configura el <strong>System Prompt</strong> igual que en el entrenamiento para
+                    activar su personalidad</li>
+                <li class="step-item">¡Pregúntale algo que <em>no</em> estaba en el dataset para ver cómo generaliza!
+                </li>
+            </ol>
+
+            <div class="alert alert-success">✅ <strong>¡ÉXITO TOTAL!</strong> Cuando veas el mensaje final del script,
+                tu IA está lista. Arrastra el archivo .gguf a LM Studio y pruébala.</div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-lang">System Prompt de Ejemplo</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+                </div>
+                <div class="code-content"><span class="string">"Eres un chef experto. Tu objetivo es dar recetas
+                        precisas
+                        basadas en ingredientes."</span></div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="footer">
+        <p>Crear LLM — Guía Maestra</p>
+        <p style="margin-top: 0.5rem;">Fine-Tuning + Fusión + Exportación GGUF para LM Studio</p>
+    </footer>
+
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()"><img id="lightbox-img" src="" alt="Zoom"></div>
+
+    <script>
+        function copyCode(btn) { const code = btn.closest('.code-block').querySelector('.code-content').textContent; navigator.clipboard.writeText(code).then(() => { btn.textContent = '✓ Copiado'; setTimeout(() => btn.textContent = 'Copiar', 2000); }); }
+        function openLightbox(img) { document.getElementById('lightbox-img').src = img.src; document.getElementById('lightbox').classList.add('active'); document.body.style.overflow = 'hidden'; }
+        function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); document.body.style.overflow = ''; }
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+        const navLinks = document.querySelectorAll('.nav-link');
+        const sections = document.querySelectorAll('.section');
+        const observer = new IntersectionObserver(entries => { entries.forEach(entry => { if (entry.isIntersecting) { navLinks.forEach(l => l.classList.remove('active')); const a = document.querySelector(`.nav-link[href="#${entry.target.id}"]`); if (a) a.classList.add('active'); } }); }, { rootMargin: '-30% 0px -60% 0px' });
+        sections.forEach(s => observer.observe(s));
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuantización — Compresión de Modelos con llama.cpp</title>
+    <meta name="description"
+        content="Guía maestra para la compresión de modelos de IA con llama.cpp, transformando modelos de Hugging Face en archivos GGUF optimizados.">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a2e;
+            --bg-code: #0d1117;
+            --accent-primary: #10b981;
+            --accent-secondary: #34d399;
+            --accent-glow: rgba(16, 185, 129, 0.12);
+            --text-primary: #e4e4e7;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --border: rgba(255, 255, 255, 0.06);
+            --border-accent: rgba(16, 185, 129, 0.3);
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        .hero {
+            position: relative;
+            min-height: 55vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 4rem 2rem;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 50% 50%, var(--accent-glow) 0%, transparent 50%);
+            animation: heroGlow 8s ease-in-out infinite;
+        }
+
+        @keyframes heroGlow {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1) rotate(3deg);
+            }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1.25rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--border-accent);
+            border-radius: 100px;
+            font-size: 0.85rem;
+            color: var(--accent-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 3.75rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #fff 0%, var(--accent-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 10, 15, 0.85);
+            backdrop-filter: blur(20px) saturate(180%);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+        }
+
+        .nav-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            gap: 0.25rem;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding: 0.75rem 0;
+        }
+
+        .nav-inner::-webkit-scrollbar {
+            display: none;
+        }
+
+        .nav-link {
+            padding: 0.5rem 1rem;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: 8px;
+            white-space: nowrap;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-link.active {
+            color: var(--accent-secondary);
+            background: var(--accent-glow);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 3rem 2rem 6rem;
+        }
+
+        .section {
+            margin-bottom: 4rem;
+            scroll-margin-top: 5rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-number {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: #fff;
+            font-weight: 700;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .section-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .section-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .highlight {
+            color: var(--accent-secondary);
+            font-weight: 600;
+        }
+
+        code {
+            background: rgba(255, 255, 255, 0.06);
+            padding: 0.15rem 0.5rem;
+            border-radius: 5px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-secondary);
+        }
+
+        .code-block {
+            position: relative;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin: 1.25rem 0;
+            overflow: hidden;
+        }
+
+        .code-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.65rem 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .code-lang {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .code-copy {
+            padding: 0.3rem 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            border-radius: 6px;
+            font-size: 0.72rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .code-copy:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .code-content {
+            padding: 1rem 1.25rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            line-height: 1.8;
+            color: #c9d1d9;
+        }
+
+        .code-content .comment {
+            color: #8b949e;
+        }
+
+        .code-content .string {
+            color: #a5d6ff;
+        }
+
+        .image-block {
+            margin: 1.5rem 0;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            transition: all 0.3s;
+        }
+
+        .image-block:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 8px 32px rgba(16, 185, 129, 0.08);
+        }
+
+        .image-block img {
+            width: 100%;
+            display: block;
+            cursor: zoom-in;
+        }
+
+        .image-caption {
+            padding: 0.75rem 1rem;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .image-caption::before {
+            content: '📸';
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+            margin: 1.25rem 0;
+            border-left: 3px solid;
+            font-size: 0.9rem;
+        }
+
+        .alert-info {
+            background: rgba(59, 130, 246, 0.08);
+            border-color: var(--info);
+            color: #93c5fd;
+        }
+
+        .alert-success {
+            background: rgba(34, 197, 94, 0.08);
+            border-color: var(--success);
+            color: #86efac;
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.08);
+            border-color: var(--warning);
+            color: #fcd34d;
+        }
+
+        .step-list {
+            list-style: none;
+            counter-reset: step-counter;
+            padding: 0;
+        }
+
+        .step-item {
+            counter-increment: step-counter;
+            position: relative;
+            padding: 1rem 1rem 1rem 3.5rem;
+            margin-bottom: 0.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .step-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: var(--border-accent);
+        }
+
+        .step-item::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 1rem;
+            top: 1rem;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: var(--accent-glow);
+            border: 1px solid var(--border-accent);
+            color: var(--accent-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* Flow Pipeline */
+        .pipeline {
+            display: flex;
+            gap: 0;
+            align-items: center;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .pipeline-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            min-width: 140px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .pipeline-step:hover {
+            border-color: var(--border-accent);
+            transform: translateY(-2px);
+        }
+
+        .pipeline-step .icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .pipeline-step .label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .pipeline-step .detail {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .pipeline-arrow {
+            font-size: 1.2rem;
+            color: var(--accent-secondary);
+            padding: 0 0.5rem;
+        }
+
+        .lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(20px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            cursor: zoom-out;
+        }
+
+        .lightbox.active {
+            display: flex;
+        }
+
+        .lightbox img {
+            max-width: 92%;
+            max-height: 92vh;
+            border-radius: 8px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        @media (max-width: 768px) {
+            .hero {
+                min-height: 45vh;
+                padding: 3rem 1.5rem;
+            }
+
+            .container {
+                padding: 2rem 1.25rem 4rem;
+            }
+
+            .pipeline {
+                flex-direction: column;
+            }
+
+            .pipeline-arrow {
+                transform: rotate(90deg);
+            }
+
+            .image-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">⚡ Optimización de Modelos</div>
+            <h1>Cuantización</h1>
+            <p>Guía maestra para la compresión de modelos con llama.cpp — Transformando modelos de Hugging Face en
+                archivos GGUF optimizados</p>
+        </div>
+    </section>
+
+    <nav class="nav">
+        <div class="nav-inner">
+            <a href="#pipeline" class="nav-link">Pipeline</a>
+            <a href="#fase1" class="nav-link">Fase 1 · Python</a>
+            <a href="#fase2" class="nav-link">Fase 2 · Herramientas</a>
+            <a href="#fase3" class="nav-link">Fase 3 · Modelo</a>
+            <a href="#fase4" class="nav-link">Fase 4 · Dependencias</a>
+            <a href="#fase5" class="nav-link">Fase 5 · Cuantización</a>
+            <a href="#fase6" class="nav-link">Fase 6 · LM Studio</a>
+        </div>
+    </nav>
+
+    <main class="container">
+
+        <!-- Pipeline Overview -->
+        <section id="pipeline" class="section">
+            <div class="section-header">
+                <div class="section-number">🔄</div>
+                <div>
+                    <div class="section-title">Pipeline de Compresión</div>
+                    <div class="section-subtitle">Visión general del flujo de trabajo</div>
+                </div>
+            </div>
+            <p>Este flujo te permitirá transformar modelos pesados de Hugging Face en archivos <span
+                    class="highlight">GGUF optimizados</span>, reduciendo su tamaño sin perder su esencia técnica.</p>
+            <div class="pipeline">
+                <div class="pipeline-step">
+                    <div class="icon">🐍</div>
+                    <div class="label">Python</div>
+                    <div class="detail">Entorno base</div>
+                </div>
+                <div class="pipeline-arrow">→</div>
+                <div class="pipeline-step">
+                    <div class="icon">🔧</div>
+                    <div class="label">llama.cpp</div>
+                    <div class="detail">Herramientas</div>
+                </div>
+                <div class="pipeline-arrow">→</div>
+                <div class="pipeline-step">
+                    <div class="icon">🤗</div>
+                    <div class="label">Hugging Face</div>
+                    <div class="detail">Modelo original</div>
+                </div>
+                <div class="pipeline-arrow">→</div>
+                <div class="pipeline-step">
+                    <div class="icon">📦</div>
+                    <div class="label">F16 GGUF</div>
+                    <div class="detail">Conversión</div>
+                </div>
+                <div class="pipeline-arrow">→</div>
+                <div class="pipeline-step">
+                    <div class="icon">⚡</div>
+                    <div class="label">Q4_K_M</div>
+                    <div class="detail">Compresión</div>
+                </div>
+                <div class="pipeline-arrow">→</div>
+                <div class="pipeline-step">
+                    <div class="icon">💻</div>
+                    <div class="label">LM Studio</div>
+                    <div class="detail">Uso final</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FASE 1 -->
+        <section id="fase1" class="section">
+            <div class="section-header">
+                <div class="section-number">1</div>
+                <div>
+                    <div class="section-title">Configuración del Entorno Python</div>
+                    <div class="section-subtitle">Motor principal de procesamiento</div>
+                </div>
+            </div>
+            <p>Para traducir y procesar el modelo, el motor principal será <span class="highlight">Python</span>.</p>
+            <ol class="step-list">
+                <li class="step-item"><strong>Obtención:</strong> Descarga el instalador oficial desde
+                    <code>python.org/downloads</code>.</li>
+                <li class="step-item"><strong>Instalación Crítica:</strong> Al ejecutar el instalador, es
+                    <strong>obligatorio</strong> marcar la casilla <span class="highlight">"Add Python to PATH"</span>.
+                    Sin este paso, el sistema no reconocerá los comandos posteriores.</li>
+                <li class="step-item"><strong>Finalización:</strong> Haz clic en "Install Now" y espera el aviso de
+                    éxito.</li>
+            </ol>
+            <div class="alert alert-warning">⚠️ Si no marcas "Add Python to PATH", tendrás que configurar las variables
+                de entorno manualmente más adelante.</div>
+        </section>
+
+        <!-- FASE 2 -->
+        <section id="fase2" class="section">
+            <div class="section-header">
+                <div class="section-number">2</div>
+                <div>
+                    <div class="section-title">Recolección de Herramientas</div>
+                    <div class="section-subtitle">Binarios y scripts necesarios</div>
+                </div>
+            </div>
+            <p>Necesitaremos los ejecutables de <span class="highlight">llama.cpp</span> y el script de enlace.</p>
+            <ol class="step-list">
+                <li class="step-item"><strong>Binarios:</strong> Ve a los Releases de llama.cpp y baja la versión que
+                    encaje con tu hardware (por ejemplo, la versión CUDA si posees una tarjeta NVIDIA). Descomprime el
+                    contenido en una carpeta de trabajo.</li>
+                <li class="step-item"><strong>Script de Conversión:</strong> Descarga el archivo específico
+                    <code>convert_hf_to_gguf.py</code> desde el repositorio de GitHub, ya que no viene incluido en los
+                    binarios.</li>
+            </ol>
+            <div class="image-block">
+                <img src="img/11.png" alt="Script en GitHub" onclick="openLightbox(this)">
+                <div class="image-caption">Localización del archivo convert_hf_to_gguf.py en GitHub para su descarga
+                    manual</div>
+            </div>
+        </section>
+
+        <!-- FASE 3 -->
+        <section id="fase3" class="section">
+            <div class="section-header">
+                <div class="section-number">3</div>
+                <div>
+                    <div class="section-title">Preparación del Modelo</div>
+                    <div class="section-subtitle">Hugging Face</div>
+                </div>
+            </div>
+            <ol class="step-list">
+                <li class="step-item"><strong>Estructura:</strong> Dentro de tu carpeta de herramientas, crea un
+                    subdirectorio llamado <code>ModeloOriginal</code>.</li>
+                <li class="step-item"><strong>Descarga:</strong> Desde Hugging Face, descarga los archivos
+                    <code>.json</code>, <code>.model</code> y los <code>.safetensors</code> del modelo elegido.</li>
+                <li class="step-item"><strong>Organización:</strong> Mueve todo el contenido descargado a la carpeta
+                    <code>ModeloOriginal</code>.</li>
+            </ol>
+            <div class="image-grid">
+                <div class="image-block">
+                    <img src="img/10.png" alt="Archivos Hugging Face" onclick="openLightbox(this)">
+                    <div class="image-caption">Lista de archivos esenciales en Hugging Face (.json y .safetensors)</div>
+                </div>
+                <div class="image-block">
+                    <img src="img/9.png" alt="Carpeta ModeloOriginal" onclick="openLightbox(this)">
+                    <div class="image-caption">Carpeta 'ModeloOriginal' con todos los archivos de configuración</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FASE 4 -->
+        <section id="fase4" class="section">
+            <div class="section-header">
+                <div class="section-number">4</div>
+                <div>
+                    <div class="section-title">Dependencias y Conversión</div>
+                    <div class="section-subtitle">Preparación del software</div>
+                </div>
+            </div>
+            <p>Abre una terminal en tu carpeta de trabajo y prepara el entorno de software.</p>
+
+            <h3 style="color: var(--text-primary); margin: 1.5rem 0 0.75rem; font-size: 1.05rem;">Librerías Base</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-lang">Terminal</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+                </div>
+                <div class="code-content">pip install gguf protobuf numpy torch</div>
+            </div>
+            <div class="image-block">
+                <img src="img/8.png" alt="Instalación pip" onclick="openLightbox(this)">
+                <div class="image-caption">Instalación correcta de las dependencias con pip</div>
+            </div>
+
+            <h3 style="color: var(--text-primary); margin: 1.5rem 0 0.75rem; font-size: 1.05rem;">Librerías Adicionales
+                (si hay errores)</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-lang">Terminal</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+                </div>
+                <div class="code-content">pip install transformers sentencepiece</div>
+            </div>
+
+            <h3 style="color: var(--text-primary); margin: 1.5rem 0 0.75rem; font-size: 1.05rem;">Generación del F16
+            </h3>
+            <p>Unificamos los archivos en un solo bloque masivo sin comprimir:</p>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-lang">Terminal</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+                </div>
+                <div class="code-content">python convert_hf_to_gguf.py <span class="string">"ModeloOriginal"</span>
+                    --outfile modelo_f16.gguf</div>
+            </div>
+
+            <div class="image-grid">
+                <div class="image-block">
+                    <img src="img/7.png" alt="Conversión ejecutándose" onclick="openLightbox(this)">
+                    <div class="image-caption">Script de conversión ejecutándose en la terminal</div>
+                </div>
+                <div class="image-block">
+                    <img src="img/6.png" alt="modelo_f16.gguf creado" onclick="openLightbox(this)">
+                    <div class="image-caption">Archivo modelo_f16.gguf creado correctamente</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FASE 5 -->
+        <section id="fase5" class="section">
+            <div class="section-header">
+                <div class="section-number">5</div>
+                <div>
+                    <div class="section-title">Cuantización (Compresión)</div>
+                    <div class="section-subtitle">Reducción a 4 bits con Q4_K_M</div>
+                </div>
+            </div>
+            <p>Para reducir el modelo a un tamaño manejable (4 bits), usaremos el algoritmo balanceado <span
+                    class="highlight">Q4_K_M</span>.</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-lang">Terminal</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+                </div>
+                <div class="code-content">./llama-quantize.exe modelo_f16.gguf resultado_q4km.gguf Q4_K_M</div>
+            </div>
+
+            <p>Al finalizar, obtendrás un archivo llamado <code>resultado_q4km.gguf</code>.</p>
+
+            <div class="image-grid">
+                <div class="image-block">
+                    <img src="img/5.png" alt="Cuantización en proceso" onclick="openLightbox(this)">
+                    <div class="image-caption">Ejecución de llama-quantize comprimiendo el modelo</div>
+                </div>
+                <div class="image-block">
+                    <img src="img/4.png" alt="Archivo final" onclick="openLightbox(this)">
+                    <div class="image-caption">Archivo final 'resultado_q4km.gguf' listo para usar</div>
+                </div>
+            </div>
+
+            <div class="alert alert-success">✅ El archivo GGUF cuantizado conserva la esencia del modelo original con
+                una fracción del tamaño.</div>
+        </section>
+
+        <!-- FASE 6 -->
+        <section id="fase6" class="section">
+            <div class="section-header">
+                <div class="section-number">6</div>
+                <div>
+                    <div class="section-title">Implementación en LM Studio</div>
+                    <div class="section-subtitle">Uso final del modelo comprimido</div>
+                </div>
+            </div>
+            <ol class="step-list">
+                <li class="step-item"><strong>Localización:</strong> En LM Studio, dirígete a "My Models" (icono de
+                    carpeta) y pulsa "Show in File Explorer".</li>
+                <li class="step-item"><strong>Importación:</strong> Crea una subcarpeta (ej. <code>Mis_Modelos</code>) y
+                    mueve allí tu nuevo archivo <code>.gguf</code>.</li>
+                <li class="step-item"><strong>Carga:</strong> Selecciona el modelo en la parte superior de la interfaz
+                    de chat.</li>
+            </ol>
+
+            <div class="image-grid">
+                <div class="image-block">
+                    <img src="img/3.png" alt="Carpeta LM Studio" onclick="openLightbox(this)">
+                    <div class="image-caption">Ubicación correcta del archivo dentro de la carpeta de LM Studio</div>
+                </div>
+                <div class="image-block">
+                    <img src="img/2.png" alt="Cargando modelo" onclick="openLightbox(this)">
+                    <div class="image-caption">Seleccionando y cargando el modelo cuantizado en la interfaz</div>
+                </div>
+            </div>
+
+            <div class="alert alert-info">ℹ️ <strong>Aviso de Uso:</strong> Si el modelo es de tipo Embedding, recuerda
+                que no generará respuestas de chat, sino que transformará texto o imágenes en vectores numéricos para
+                búsquedas en bases de datos.</div>
+
+            <div class="image-block">
+                <img src="img/1.png" alt="Modelo Embedding" onclick="openLightbox(this)">
+                <div class="image-caption">Ejemplo de comportamiento de un modelo Embedding</div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="footer">
+        <p>Guía Maestra: Compresión de Modelos con llama.cpp</p>
+        <p style="margin-top: 0.5rem;">Transformando modelos pesados en archivos GGUF optimizados</p>
+    </footer>
+
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+        <img id="lightbox-img" src="" alt="Zoom">
+    </div>
+
+    <script>
+        function copyCode(btn) {
+            const code = btn.closest('.code-block').querySelector('.code-content').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                btn.textContent = '✓ Copiado';
+                setTimeout(() => btn.textContent = 'Copiar', 2000);
+            });
+        }
+        function openLightbox(img) {
+            document.getElementById('lightbox-img').src = img.src;
+            document.getElementById('lightbox').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+        const navLinks = document.querySelectorAll('.nav-link');
+        const sections = document.querySelectorAll('.section');
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    const a = document.querySelector(`.nav-link[href="#${entry.target.id}"]`);
+                    if (a) a.classList.add('active');
+                }
+            });
+        }, { rootMargin: '-30% 0px -60% 0px' });
+        sections.forEach(s => observer.observe(s));
+    </script>
+</body>
+
+</html>

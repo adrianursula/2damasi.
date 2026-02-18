@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Destilación de IA Local — Mac Mini (Apple Silicon)</title>
+    <meta name="description"
+        content="Informe Maestro: Creación de un Modelo de Lenguaje Especializado mediante Destilación y LoRA en Mac Mini.">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a2e;
+            --bg-code: #0d1117;
+            --accent-primary: #f59e0b;
+            --accent-secondary: #fbbf24;
+            --accent-glow: rgba(245, 158, 11, 0.10);
+            --text-primary: #e4e4e7;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --border: rgba(255, 255, 255, 0.06);
+            --border-accent: rgba(245, 158, 11, 0.3);
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        .hero {
+            position: relative;
+            min-height: 55vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 4rem 2rem;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 50% 50%, var(--accent-glow) 0%, transparent 50%);
+            animation: glow 8s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1) rotate(3deg);
+            }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 850px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1.25rem;
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid var(--border-accent);
+            border-radius: 100px;
+            font-size: 0.85rem;
+            color: var(--accent-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 3.75rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #fff 0%, var(--accent-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 650px;
+            margin: 0 auto 2rem;
+        }
+
+        .hero-meta {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .hero-meta-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .hero-meta-item span:first-child {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+        }
+
+        .hero-meta-item span:last-child {
+            font-size: 0.9rem;
+            color: var(--accent-secondary);
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 10, 15, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+        }
+
+        .nav-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            gap: 0.25rem;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding: 0.75rem 0;
+        }
+
+        .nav-inner::-webkit-scrollbar {
+            display: none;
+        }
+
+        .nav-link {
+            padding: 0.5rem 1rem;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: 8px;
+            white-space: nowrap;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-link.active {
+            color: var(--accent-secondary);
+            background: var(--accent-glow);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 3rem 2rem 6rem;
+        }
+
+        .section {
+            margin-bottom: 4rem;
+            scroll-margin-top: 5rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-number {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: #1a1a2e;
+            font-weight: 700;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .section-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .section-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .highlight {
+            color: var(--accent-secondary);
+            font-weight: 600;
+        }
+
+        h3 {
+            color: var(--text-primary);
+            margin: 1.5rem 0 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        code {
+            background: rgba(255, 255, 255, 0.06);
+            padding: 0.15rem 0.5rem;
+            border-radius: 5px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-secondary);
+        }
+
+        .code-block {
+            position: relative;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin: 1.25rem 0;
+            overflow: hidden;
+        }
+
+        .code-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.65rem 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .code-lang {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .code-copy {
+            padding: 0.3rem 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            border-radius: 6px;
+            font-size: 0.72rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .code-copy:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .code-content {
+            padding: 1rem 1.25rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            line-height: 1.75;
+            color: #c9d1d9;
+            white-space: pre;
+        }
+
+        .code-content .comment {
+            color: #8b949e;
+        }
+
+        .code-content .string {
+            color: #a5d6ff;
+        }
+
+        .code-content .keyword {
+            color: #ff7b72;
+        }
+
+        .code-content .func {
+            color: #d2a8ff;
+        }
+
+        .image-block {
+            margin: 1.5rem 0;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            transition: all 0.3s;
+        }
+
+        .image-block:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 8px 32px rgba(245, 158, 11, 0.06);
+        }
+
+        .image-block img {
+            width: 100%;
+            display: block;
+            cursor: zoom-in;
+        }
+
+        .image-caption {
+            padding: 0.75rem 1rem;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .image-caption::before {
+            content: '📸';
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+            margin: 1.25rem 0;
+            border-left: 3px solid;
+            font-size: 0.9rem;
+        }
+
+        .alert-info {
+            background: rgba(59, 130, 246, 0.08);
+            border-color: var(--info);
+            color: #93c5fd;
+        }
+
+        .alert-success {
+            background: rgba(34, 197, 94, 0.08);
+            border-color: var(--success);
+            color: #86efac;
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.08);
+            border-color: var(--warning);
+            color: #fcd34d;
+        }
+
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.08);
+            border-color: var(--danger);
+            color: #fca5a5;
+        }
+
+        .step-list {
+            list-style: none;
+            counter-reset: step-counter;
+            padding: 0;
+        }
+
+        .step-item {
+            counter-increment: step-counter;
+            position: relative;
+            padding: 1rem 1rem 1rem 3.5rem;
+            margin-bottom: 0.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .step-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: var(--border-accent);
+        }
+
+        .step-item::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 1rem;
+            top: 1rem;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: var(--accent-glow);
+            border: 1px solid var(--border-accent);
+            color: var(--accent-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* Concept cards */
+        .concept-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .concept-card {
+            padding: 1.25rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s;
+        }
+
+        .concept-card:hover {
+            border-color: var(--border-accent);
+            transform: translateY(-2px);
+        }
+
+        .concept-card .icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .concept-card h4 {
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .concept-card p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin: 0;
+        }
+
+        /* Troubleshooting table */
+        .trouble-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.25rem 0;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .trouble-table th {
+            background: rgba(255, 255, 255, 0.04);
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .trouble-table td {
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .trouble-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(20px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            cursor: zoom-out;
+        }
+
+        .lightbox.active {
+            display: flex;
+        }
+
+        .lightbox img {
+            max-width: 92%;
+            max-height: 92vh;
+            border-radius: 8px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        @media (max-width: 768px) {
+            .hero {
+                min-height: 45vh;
+                padding: 3rem 1.5rem;
+            }
+
+            .container {
+                padding: 2rem 1.25rem 4rem;
+            }
+
+            .concept-grid,
+            .image-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">🧬 Knowledge Distillation</div>
+            <h1>Destilación de IA Local</h1>
+            <p>Creación de un Modelo de Lenguaje Especializado (SLM) mediante Destilación y LoRA en Mac Mini con Apple
+                Silicon</p>
+            <div class="hero-meta">
+                <div class="hero-meta-item">
+                    <span>Plataforma</span>
+                    <span>Mac Mini (M1/M2/M3)</span>
+                </div>
+                <div class="hero-meta-item">
+                    <span>Profesor</span>
+                    <span>Mistral-7B</span>
+                </div>
+                <div class="hero-meta-item">
+                    <span>Estudiante</span>
+                    <span>TinyLlama-1.1B</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <nav class="nav">
+        <div class="nav-inner">
+            <a href="#fundamentos" class="nav-link">Fundamentos</a>
+            <a href="#entorno" class="nav-link">Entorno</a>
+            <a href="#licencia" class="nav-link">Licencia</a>
+            <a href="#dataset" class="nav-link">Dataset</a>
+            <a href="#entrenamiento" class="nav-link">Entrenamiento</a>
+            <a href="#validacion" class="nav-link">Validación KL</a>
+            <a href="#troubleshooting" class="nav-link">Troubleshooting</a>
+            <a href="#capturas" class="nav-link">Capturas</a>
+        </div>
+    </nav>
+
+    <main class="container">
+
+        <!-- Fundamentos -->
+        <section id="fundamentos" class="section">
+            <div class="section-header">
+                <div class="section-number">1</div>
+                <div>
+                    <div class="section-title">Fundamentos del Proyecto</div>
+                    <div class="section-subtitle">El concepto de destilación de conocimiento</div>
+                </div>
+            </div>
+            <p>El objetivo es replicar la "inteligencia" de un modelo masivo que requiere servidores industriales (<span
+                    class="highlight">el Profesor</span>) en un modelo diminuto que cabe en la memoria unificada de tu
+                Mac (<span class="highlight">el Estudiante</span>).</p>
+
+            <div class="concept-grid">
+                <div class="concept-card">
+                    <div class="icon">☁️</div>
+                    <h4>El Profesor (Nube)</h4>
+                    <p>Un modelo experto (ej. Mistral-7B o Llama-3-70B vía API) que no solo da respuestas, sino que
+                        genera el "razonamiento" paso a paso.</p>
+                </div>
+                <div class="concept-card">
+                    <div class="icon">💻</div>
+                    <h4>El Estudiante (Local)</h4>
+                    <p>TinyLlama-1.1B — Un modelo diseñado para dispositivos de borde con 1.1 billones de parámetros.
+                    </p>
+                </div>
+                <div class="concept-card">
+                    <div class="icon">🧬</div>
+                    <h4>La Técnica: LoRA</h4>
+                    <p>Low-Rank Adaptation congela el modelo base y solo entrena pequeñas capas adaptadoras, permitiendo
+                        que el entrenamiento quepa en la RAM de consumo.</p>
+                </div>
+            </div>
+
+            <div class="image-grid">
+                <div class="image-block">
+                    <img src="img/1.png" alt="Concepto destilación" onclick="openLightbox(this)">
+                    <div class="image-caption">Diagrama conceptual de la destilación</div>
+                </div>
+                <div class="image-block">
+                    <img src="img/2.png" alt="Arquitectura" onclick="openLightbox(this)">
+                    <div class="image-caption">Arquitectura Profesor-Estudiante</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Entorno -->
+        <section id="entorno" class="section">
+            <div class="section-header">
+                <div class="section-number">2</div>
+                <div>
+                    <div class="section-title">Preparación del Entorno</div>
+                    <div class="section-subtitle">Hardware y Software Stack</div>
+                </div>
+            </div>
+
+            <h3>Requisitos de Hardware</h3>
+            <div class="concept-grid">
+                <div class="concept-card">
+                    <div class="icon">🖥️</div>
+                    <h4>Dispositivo</h4>
+                    <p>Mac con Apple Silicon (M1/M2/M3)</p>
+                </div>
+                <div class="concept-card">
+                    <div class="icon">🧠</div>
+                    <h4>RAM</h4>
+                    <p>Mínimo 8GB. Cerrar otras apps. Recomendado 16GB+.</p>
+                </div>
+                <div class="concept-card">
+                    <div class="icon">💾</div>
+                    <h4>Almacenamiento</h4>
+                    <p>20GB libres en disco</p>
+                </div>
+            </div>
+
+            <h3>Instalación del Software</h3>
+            <ol class="step-list">
+                <li class="step-item"><strong>Instalar Miniconda:</strong> Descarga e instala Miniconda para macOS
+                    (Apple Silicon / ARM64).</li>
+                <li class="step-item"><strong>Crear el "Laboratorio":</strong> Ejecuta los comandos de configuración del
+                    entorno.</li>
+            </ol>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-lang">Bash — Configuración del Entorno</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+                </div>
+                <div class="code-content"><span class="comment"># 1. Crear entorno limpio</span>
+                    conda create -n ia-mac python=3.10 -y
+
+                    <span class="comment"># 2. Activar entorno</span>
+                    conda activate ia-mac
+
+                    <span class="comment"># 3. Instalar PyTorch con soporte Metal (MPS)</span>
+                    pip install --pre torch torchvision torchaudio \
+                    --extra-index-url https://download.pytorch.org/whl/nightly/cpu
+
+                    <span class="comment"># 4. Instalar ecosistema Hugging Face</span>
+                    pip install transformers datasets accelerate peft trl \
+                    scipy scikit-learn huggingface_hub
+                </div>
+            </div>
+
+            <div class="image-grid">
+                <div class="image-block">
+                    <img src="img/3.png" alt="Instalación conda" onclick="openLightbox(this)">
+                    <div class="image-caption">Configuración del entorno conda</div>
+                </div>
+                <div class="image-block">
+                    <img src="img/4.png" alt="Instalación pip" onclick="openLightbox(this)">
+                    <div class="image-caption">Instalación de dependencias</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Licencia -->
+        <section id="licencia" class="section">
+            <div class="section-header">
+                <div class="section-number">🔑</div>
+                <div>
+                    <div class="section-title">Licencia y Autenticación</div>
+                    <div class="section-subtitle">Acceso a modelos Gated de Hugging Face</div>
+                </div>
+            </div>
+
+            <div class="alert alert-danger">🚨 <strong>CRÍTICO:</strong> Los modelos Llama de Meta son "cerrados" (Gated
+                Models). Sin aceptar los términos te dará un error 403 Forbidden o 401 Unauthorized.</div>
+
+            <h3>Paso 1: Aceptar Licencia</h3>
+            <ol class="step-list">
+                <li class="step-item">Entra en <code>huggingface.co/meta-llama/Llama-3.2-1B-Instruct</code></li>
+                <li class="step-item">Inicia sesión con tu cuenta de Hugging Face</li>
+                <li class="step-item">Rellena el formulario y dale a "Accept License"</li>
+                <li class="step-item">Espera a recibir el email de acceso (instantáneo a 15 mins)</li>
+            </ol>
+
+            <h3>Paso 2: Token en el Mac</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-lang">Bash — Autenticación</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+                </div>
+                <div class="code-content">conda activate ia-mac
+                    huggingface-cli login
+                    <span class="comment"># Pega tu token de lectura (Read) de Hugging Face</span>
+                    <span class="comment"># No verás nada mientras pegas (por seguridad). Pulsa Enter.</span>
+                </div>
+            </div>
+
+            <div class="image-grid">
+                <div class="image-block">
+                    <img src="img/5.png" alt="Licencia Hugging Face" onclick="openLightbox(this)">
+                    <div class="image-caption">Proceso de aceptación de licencia</div>
+                </div>
+                <div class="image-block">
+                    <img src="img/6.png" alt="Token login" onclick="openLightbox(this)">
+                    <div class="image-caption">Login con token en terminal</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dataset -->
+        <section id="dataset" class="section">
+            <div class="section-header">
+                <div class="section-number">3</div>
+                <div>
+                    <div class="section-title">Generación de Datos</div>
+                    <div class="section-subtitle">El "Libro de Texto" del Estudiante</div>
+                </div>
+            </div>
+
+            <p>Crea una carpeta llamada <code>Proyecto_Destilacion</code>. Tienes dos opciones para generar el dataset
+                de entrenamiento:</p>
+
+            <h3>Opción A: Generación Automática (Script)</h3>
+            <p>Archivo: <code>1_generador_dataset.py</code></p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-lang">Python — 1_generador_dataset.py</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+                </div>
+                <div class="code-content"><span class="keyword">import</span> json
+                    <span class="keyword">import</span> time
+                    <span class="keyword">from</span> huggingface_hub <span class="keyword">import</span>
+                    InferenceClient
+
+                    <span class="comment"># --- CONFIGURACIÓN ---</span>
+                    HF_TOKEN = None <span class="comment"># Se detecta automático si hiciste login</span>
+                    MODELO_PROFESOR = <span class="string">"mistralai/Mistral-7B-Instruct-v0.3"</span>
+
+                    inputs_crudos = [
+                    <span class="string">"oi kiero una amburgesa ya"</span>,
+                    <span class="string">"manda el informe q no tengo tiempo pa tonterias"</span>,
+                    <span class="string">"este producto es una basura no sirve pa nada"</span>,
+                    <span class="string">"k pasa tio cuanto tiempo sin verte"</span>,
+                    <span class="string">"no entiendo nada de lo q dices explica mejor"</span>,
+                    <span class="string">"necesito vacaciones xq estoy quemado del curro"</span>
+                    ]
+
+                    <span class="keyword">def</span> <span class="func">generar_datos</span>():
+                    client = InferenceClient(model=MODELO_PROFESOR, token=HF_TOKEN)
+                    dataset_final = []
+
+                    <span class="keyword">for</span> i, texto_sucio <span class="keyword">in</span>
+                    enumerate(inputs_crudos):
+                    prompt = <span class="string">f"""
+                        Actúa como un experto en comunicación corporativa.
+                        Reescribe el texto de forma profesional.
+                        Texto original: "{texto_sucio}"
+                        Formato: RAZONAMIENTO: ... RESPUESTA: ...
+                        """</span>
+                    respuesta = client.text_generation(prompt, max_new_tokens=256)
+                    dataset_final.append({
+                    <span class="string">"instruction"</span>: <span class="string">f"Corrige este texto:
+                        '{texto_sucio}'"</span>,
+                    <span class="string">"input"</span>: texto_sucio,
+                    <span class="string">"output"</span>: respuesta.strip()
+                    })
+
+                    <span class="keyword">with</span> open(<span class="string">"dataset_maestro.json"</span>, <span
+                        class="string">"w"</span>) <span class="keyword">as</span> f:
+                    json.dump(dataset_final, f, indent=4, ensure_ascii=False)
+                    print(<span class="string">"✅ Dataset 'dataset_maestro.json' creado."</span>)
+                </div>
+            </div>
+
+            <h3>Opción B: Carga Manual (JSON)</h3>
+            <p>Crea un archivo <code>dataset_maestro.json</code> con datos validados:</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-lang">JSON — dataset_maestro.json</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+                </div>
+                <div class="code-content">[
+                    {
+                    "instruction": "Corrige este texto: 'oi kiero una amburgesa ya'",
+                    "input": "oi kiero una amburgesa ya",
+                    "output": "RAZONAMIENTO: Faltas graves ('oi', 'amburgesa')...\nRESPUESTA: Hola, me gustaría pedir
+                    una hamburguesa."
+                    },
+                    {
+                    "instruction": "Corrige: 'manda el informe q no tengo tiempo'",
+                    "input": "manda el informe q no tengo tiempo",
+                    "output": "RAZONAMIENTO: Demasiado agresivo.\nRESPUESTA: Por favor, envíame el informe."
+                    },
+                    {
+                    "instruction": "Explica la relatividad brevemente",
+                    "input": "",
+                    "output": "La relatividad establece que el tiempo y el espacio dependen de la velocidad del
+                    observador."
+                    }
+                    ]</div>
+            </div>
+
+            <div class="image-grid">
+                <div class="image-block">
+                    <img src="img/7.png" alt="Dataset generado" onclick="openLightbox(this)">
+                    <div class="image-caption">Dataset de entrenamiento generado</div>
+                </div>
+                <div class="image-block">
+                    <img src="img/8.png" alt="Contenido JSON" onclick="openLightbox(this)">
+                    <div class="image-caption">Estructura del archivo JSON con datos destilados</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Entrenamiento -->
+        <section id="entrenamiento" class="section">
+            <div class="section-header">
+                <div class="section-number">4</div>
+                <div>
+                    <div class="section-title">Entrenamiento (Destilación con LoRA)</div>
+                    <div class="section-subtitle">El script definitivo — 2_entrenador_mac.py</div>
+                </div>
+            </div>
+
+            <p>Este script usa <span class="highlight">LoRA</span> para insertar capas entrenables en el modelo
+                TinyLlama-1.1B. Soluciona errores de versiones anteriores (<code>KeyError: 'text'</code>,
+                <code>SFTConfig</code>).</p>
+
+            <div class="alert alert-info">ℹ️ <strong>Requisitos previos:</strong> Antes de ejecutar, actualiza las
+                librerías con <code>pip install --upgrade torch transformers trl peft datasets accelerate</code></div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-lang">Python — 2_entrenador_mac.py</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+                </div>
+                <div class="code-content"><span class="keyword">import</span> torch
+                    <span class="keyword">from</span> datasets <span class="keyword">import</span> load_dataset
+                    <span class="keyword">from</span> transformers <span class="keyword">import</span>
+                    AutoModelForCausalLM, AutoTokenizer
+                    <span class="keyword">from</span> trl <span class="keyword">import</span> SFTConfig, SFTTrainer
+                    <span class="keyword">from</span> peft <span class="keyword">import</span> LoraConfig, TaskType
+
+                    MODEL_NAME = <span class="string">"TinyLlama/TinyLlama-1.1B-Chat-v1.0"</span>
+                    DATASET_FILE = <span class="string">"dataset_maestro.json"</span>
+                    OUTPUT_DIR = <span class="string">"TinyLlama-Destilada-Mac"</span>
+
+                    <span class="comment"># 1. Cargar Dataset</span>
+                    dataset = load_dataset(<span class="string">"json"</span>, data_files=DATASET_FILE, split=<span
+                        class="string">"train"</span>)
+
+                    <span class="comment"># CORRECCIÓN CRÍTICA: FORMATEO MANUAL</span>
+                    <span class="keyword">def</span> <span class="func">formatear_tinyllama</span>(ejemplos):
+                    textos = []
+                    <span class="keyword">for</span> q, i, a <span class="keyword">in</span> zip(ejemplos[<span
+                        class="string">"instruction"</span>], ejemplos[<span class="string">"input"</span>],
+                    ejemplos[<span class="string">"output"</span>]):
+                    pregunta = <span class="string">f"{q}\nContexto: {i}"</span> <span class="keyword">if</span> i <span
+                        class="keyword">else</span> q
+                    prompt = (
+                    <span class="string">f"&lt;|system|&gt;\nEres un asistente inteligente.&lt;/s&gt;\n"</span>
+                    <span class="string">f"&lt;|user|&gt;\n{pregunta}&lt;/s&gt;\n"</span>
+                    <span class="string">f"&lt;|assistant|&gt;\n{a}&lt;/s&gt;"</span>
+                    )
+                    textos.append(prompt)
+                    <span class="keyword">return</span> {<span class="string">"text"</span>: textos}
+
+                    dataset = dataset.map(formatear_tinyllama, batched=True)
+
+                    <span class="comment"># 2. Cargar Modelo (bfloat16 para Apple Silicon)</span>
+                    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+                    tokenizer.pad_token = tokenizer.eos_token
+                    model = AutoModelForCausalLM.from_pretrained(
+                    MODEL_NAME, device_map=<span class="string">"auto"</span>, torch_dtype=torch.bfloat16,
+                    use_cache=False
+                    )
+
+                    <span class="comment"># 3. LoRA Config</span>
+                    peft_config = LoraConfig(
+                    r=16, lora_alpha=32, lora_dropout=0.05, bias=<span class="string">"none"</span>,
+                    task_type=TaskType.CAUSAL_LM,
+                    target_modules=[<span class="string">"q_proj"</span>, <span class="string">"k_proj"</span>, <span
+                        class="string">"v_proj"</span>, <span class="string">"o_proj"</span>]
+                    )
+
+                    <span class="comment"># 4. Entrenamiento</span>
+                    training_args = SFTConfig(
+                    output_dir=OUTPUT_DIR, max_length=1024,
+                    dataset_text_field=<span class="string">"text"</span>,
+                    num_train_epochs=3, per_device_train_batch_size=2,
+                    gradient_accumulation_steps=4, learning_rate=2e-4,
+                    bf16=True, save_strategy=<span class="string">"epoch"</span>, report_to=<span
+                        class="string">"none"</span>
+                    )
+
+                    trainer = SFTTrainer(
+                    model=model, args=training_args, train_dataset=dataset,
+                    peft_config=peft_config, processing_class=tokenizer
+                    )
+                    trainer.train()
+                    trainer.save_model(OUTPUT_DIR + <span class="string">"_final"</span>)
+                </div>
+            </div>
+
+            <div class="image-grid">
+                <div class="image-block">
+                    <img src="img/9.png" alt="Entrenamiento en progreso" onclick="openLightbox(this)">
+                    <div class="image-caption">Entrenamiento LoRA en progreso en MPS</div>
+                </div>
+                <div class="image-block">
+                    <img src="img/10.png" alt="Métricas de entrenamiento" onclick="openLightbox(this)">
+                    <div class="image-caption">Métricas de loss durante el entrenamiento</div>
+                </div>
+                <div class="image-block">
+                    <img src="img/11.png" alt="Guardando modelo" onclick="openLightbox(this)">
+                    <div class="image-caption">Guardando el modelo destilado</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Validación KL -->
+        <section id="validacion" class="section">
+            <div class="section-header">
+                <div class="section-number">5</div>
+                <div>
+                    <div class="section-title">Validación Científica</div>
+                    <div class="section-subtitle">Divergencia KL — Prueba de que el modelo aprendió</div>
+                </div>
+            </div>
+
+            <p>Este script comprueba si la destilación funcionó comparando <span
+                    class="highlight">matemáticamente</span> el modelo original contra tu copia entrenada. Es la prueba
+                definitiva.</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-lang">Python — 3_medir_divergencia.py</span>
+                    <button class="code-copy" onclick="copyCode(this)">Copiar</button>
+                </div>
+                <div class="code-content"><span class="keyword">import</span> torch
+                    <span class="keyword">import</span> torch.nn.functional <span class="keyword">as</span> F
+                    <span class="keyword">from</span> transformers <span class="keyword">import</span>
+                    AutoModelForCausalLM, AutoTokenizer
+                    <span class="keyword">from</span> peft <span class="keyword">import</span> PeftModel
+
+                    MODELO_BASE = <span class="string">"TinyLlama/TinyLlama-1.1B-Chat-v1.0"</span>
+                    RUTA_ADAPTADOR = <span class="string">"TinyLlama-Destilada-Mac_final"</span>
+                    DEVICE = <span class="string">"mps"</span> <span class="keyword">if</span>
+                    torch.backends.mps.is_available() <span class="keyword">else</span> <span
+                        class="string">"cpu"</span>
+
+                    tokenizer = AutoTokenizer.from_pretrained(MODELO_BASE)
+                    model_base = AutoModelForCausalLM.from_pretrained(
+                    MODELO_BASE, device_map=DEVICE, torch_dtype=torch.bfloat16
+                    )
+                    model_estudiante = PeftModel.from_pretrained(model_base, RUTA_ADAPTADOR)
+
+                    prompt_test = <span class="string">"Corrige este texto: 'oi kiero una amburgesa ya'"</span>
+
+                    <span class="comment"># Modo Base (adaptador desactivado)</span>
+                    <span class="keyword">with</span> model_estudiante.disable_adapter():
+                    logits_base = model_estudiante(
+                    **tokenizer(<span class="string">f"&lt;|user|&gt;\n{prompt_test}&lt;/s&gt;"</span>,
+                    return_tensors=<span class="string">"pt"</span>).to(DEVICE)
+                    ).logits
+
+                    <span class="comment"># Modo Entrenado (adaptador activo)</span>
+                    logits_lora = model_estudiante(
+                    **tokenizer(<span class="string">f"&lt;|user|&gt;\n{prompt_test}&lt;/s&gt;"</span>,
+                    return_tensors=<span class="string">"pt"</span>).to(DEVICE)
+                    ).logits
+
+                    <span class="comment"># Cálculo KL</span>
+                    kl = torch.nn.KLDivLoss(reduction=<span class="string">'batchmean'</span>)(
+                    F.log_softmax(logits_lora, dim=-1),
+                    F.softmax(logits_base, dim=-1)
+                    )
+
+                    print(<span class="string">f"📊 DIVERGENCIA KL: {kl.item():.6f}"</span>)
+                    <span class="keyword">if</span> kl.item() > 0.0001:
+                    print(<span class="string">"✅ CONFIRMADO: El modelo ha aprendido."</span>)
+                    <span class="keyword">else</span>:
+                    print(<span class="string">"❌ ALERTA: El modelo es idéntico al original."</span>)
+                </div>
+            </div>
+
+            <div class="alert alert-success">✅ <strong>Si la Divergencia KL &gt; 0.0001:</strong> El modelo ha aprendido
+                y modificado sus pesos. ¡Destilación exitosa!</div>
+
+            <div class="image-grid">
+                <div class="image-block">
+                    <img src="img/12.png" alt="Divergencia KL" onclick="openLightbox(this)">
+                    <div class="image-caption">Resultado de la divergencia KL — Modelo confirmado</div>
+                </div>
+                <div class="image-block">
+                    <img src="img/13.png" alt="Validación exitosa" onclick="openLightbox(this)">
+                    <div class="image-caption">Validación científica completada</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Troubleshooting -->
+        <section id="troubleshooting" class="section">
+            <div class="section-header">
+                <div class="section-number">⚠️</div>
+                <div>
+                    <div class="section-title">Troubleshooting</div>
+                    <div class="section-subtitle">Solución de problemas comunes</div>
+                </div>
+            </div>
+
+            <h3>Checklist de Ejecución</h3>
+            <ol class="step-list">
+                <li class="step-item"><code>conda activate ia-mac</code></li>
+                <li class="step-item">Generar dataset: <code>python 1_generador_dataset.py</code> (o crear JSON manual)
+                </li>
+                <li class="step-item">Preparar entorno: Cerrar navegadores/apps pesadas</li>
+                <li class="step-item">Entrenar: <code>python 2_entrenador_mac.py</code></li>
+                <li class="step-item">Inferencia: <code>python 3_medir_divergencia.py</code></li>
+            </ol>
+
+            <h3>Errores Comunes</h3>
+            <table class="trouble-table">
+                <thead>
+                    <tr>
+                        <th>Error</th>
+                        <th>Causa</th>
+                        <th>Solución</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>MPS backend out of memory</code></td>
+                        <td>Memoria llena</td>
+                        <td>Asegurar <code>batch_size=1</code> en el script</td>
+                    </tr>
+                    <tr>
+                        <td><code>Killed: 9</code></td>
+                        <td>Sistema mató el proceso</td>
+                        <td>Falta extrema de RAM. Reiniciar Mac + solo usar terminal</td>
+                    </tr>
+                    <tr>
+                        <td>Calentamiento excesivo</td>
+                        <td>Carga de GPU al 100%</td>
+                        <td>Normal. Asegurar ventilación adecuada</td>
+                    </tr>
+                    <tr>
+                        <td><code>Error 401/403</code></td>
+                        <td>Licencia no aceptada</td>
+                        <td>Aceptar licencia en HuggingFace + verificar token</td>
+                    </tr>
+                    <tr>
+                        <td><code>KeyError: 'text'</code></td>
+                        <td>Formato de datos incorrecto</td>
+                        <td>Usar el script actualizado con <code>dataset.map()</code></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Cambios Clave (Versión actualizada)</h3>
+            <div class="alert alert-info">
+                <strong>1. SFTConfig:</strong> La librería <code>trl</code> movió <code>max_seq_length</code>. Ahora
+                debe estar como <code>max_length</code> en SFTConfig.<br><br>
+                <strong>2. KeyError 'text':</strong> Se añadió <code>dataset.map(formatear...)</code> para crear la
+                columna explícitamente.<br><br>
+                <strong>3. Modelo TinyLlama:</strong> Al cambiar de Llama-3 (8GB+) a TinyLlama (1.1GB), se evita saturar
+                disco y RAM.
+            </div>
+        </section>
+
+        <!-- Capturas -->
+        <section id="capturas" class="section">
+            <div class="section-header">
+                <div class="section-number">📸</div>
+                <div>
+                    <div class="section-title">Galería de Capturas</div>
+                    <div class="section-subtitle">Evidencia visual del proceso completo</div>
+                </div>
+            </div>
+
+            <div class="image-grid">
+                <div class="image-block">
+                    <img src="img/14.png" alt="Captura 14" onclick="openLightbox(this)">
+                    <div class="image-caption">Ejecución del entrenamiento</div>
+                </div>
+                <div class="image-block">
+                    <img src="img/15.png" alt="Captura 15" onclick="openLightbox(this)">
+                    <div class="image-caption">Descarga del modelo base</div>
+                </div>
+                <div class="image-block">
+                    <img src="img/16.png" alt="Captura 16" onclick="openLightbox(this)">
+                    <div class="image-caption">Proceso de destilación</div>
+                </div>
+                <div class="image-block">
+                    <img src="img/17.png" alt="Captura 17" onclick="openLightbox(this)">
+                    <div class="image-caption">Resultado final de la destilación</div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="footer">
+        <p>Informe Maestro: Destilación de IA Local en Mac Mini (Apple Silicon)</p>
+        <p style="margin-top: 0.5rem;">Proyecto: Creación de SLM mediante Destilación y LoRA</p>
+    </footer>
+
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+        <img id="lightbox-img" src="" alt="Zoom">
+    </div>
+
+    <script>
+        function copyCode(btn) {
+            const code = btn.closest('.code-block').querySelector('.code-content').textContent;
+            navigator.clipboard.writeText(code).then(() => { btn.textContent = '✓ Copiado'; setTimeout(() => btn.textContent = 'Copiar', 2000); });
+        }
+        function openLightbox(img) { document.getElementById('lightbox-img').src = img.src; document.getElementById('lightbox').classList.add('active'); document.body.style.overflow = 'hidden'; }
+        function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); document.body.style.overflow = ''; }
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+        const navLinks = document.querySelectorAll('.nav-link');
+        const sections = document.querySelectorAll('.section');
+        const observer = new IntersectionObserver(entries => { entries.forEach(entry => { if (entry.isIntersecting) { navLinks.forEach(l => l.classList.remove('active')); const a = document.querySelector(`.nav-link[href="#${entry.target.id}"]`); if (a) a.classList.add('active'); } }); }, { rootMargin: '-30% 0px -60% 0px' });
+        sections.forEach(s => observer.observe(s));
+    </script>
+</body>
+
+</html>
